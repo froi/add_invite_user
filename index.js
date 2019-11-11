@@ -1,0 +1,56 @@
+const core = require('@actions/core');
+const github = require('@actions/github');
+
+async function getParserRules({octokit, owner, repo, path}) {
+  const parserRules = await octokit.repos.getContents({owner, repo, path});
+  core.debug("in getParserRules")
+  core.debug(parserRules)
+  return JSON.parse(parserRules);
+}
+
+async function run() {
+  try {
+    core.debug((new Date()).toTimeString());
+
+    const {issue} = github.context.payload;
+    const parsingRulePath = core.getInput('PARSING_RULES_PATH');
+
+    const octokit = new github.GitHub(core.getInput('ADMIN_TOKEN'));
+
+    const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+    const parserRules = await getParserRules({octokit, owner, repo, path: parsingRulePath});
+
+    const emailMatch = issue.body.match(parserRules.email.regex);
+    const usernameMatch = issue.body.match(parserRules.username.regex);
+
+    if(!emailMatch && !usernameMatch) {
+      throw Error('Parsing error: email and username not found.');
+    }
+
+    const email = emailMatch.groups.email;
+    const username = usernameMatch.groups.username;
+
+    if(email) {
+      const result = await octokit.orgs.createInvitation({
+        org: owner,
+        role: core.getInput("USER_ROLE"),
+        email
+      });
+      core.debug(result);
+      core.info(`User with email ${email} has been invited into the org.`);
+    } else {
+      const result = await octokit.orgs.addOrUpdateMembership({
+        org: owner,
+        username
+      })
+      core.debug(result);
+      core.info(`User with username ${username} has been invited into the org.`);
+    }
+    core.info((new Date()).toTimeString())
+  }
+  catch (error) {
+    core.setFailed(error.message);
+  }
+}
+
+run();

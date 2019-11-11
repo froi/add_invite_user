@@ -1,0 +1,10 @@
+name: 'Add User To Org'
+description: 'Add user from a GitHub Issue to the org.'
+inputs:
+  PARSING_RULES_PATH:
+    description: 'path to the prasing rules'
+    required: true
+    default: '.github/parsing_rules.json'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
