@@ -15,7 +15,7 @@ async function run() {
     const {issue} = github.context.payload;
     const parsingRulePath = core.getInput('PARSING_RULES_PATH');
 
-    const octokit = new github.GitHub(core.getInput('ADMIN_TOKEN'));
+    const octokit = new github.GitHub(process.env.ADMIN_TOKEN);
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     const parserRules = await getParserRules({octokit, owner, repo, path: parsingRulePath});
