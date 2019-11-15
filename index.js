@@ -4,7 +4,7 @@ const github = require('@actions/github');
 async function getParserRules({octokit, owner, repo, path}) {
   const parserRules = await octokit.repos.getContents({owner, repo, path});
   core.debug("in getParserRules")
-  core.debug(JSON.stringify9parserRules)
+  core.debug(JSON.stringify(parserRules))
   return parserRules;
 }
 
