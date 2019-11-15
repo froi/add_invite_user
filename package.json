@@ -7,7 +7,7 @@
     "lint": "eslint index.js",
     "package": "ncc build index.js -o dist",
     "test": "eslint index.js && jest",
-    "preversion": "npm run package && git add dist/ && git commit -m 'Packaged new version.'",
+    "preversion": "eslint index.js && npm run package && git add dist/ && git commit -m 'Packaged new version.'",
     "postversion": "git push && git push --tags"
   },
   "repository": {
