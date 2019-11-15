@@ -525,13 +525,19 @@ async function getParserRules({octokit, owner, repo, path}) {
 }
 
 async function run() {
+  let octokit
+  try {
+    octokit = new github.GitHub(process.env.ADMIN_TOKEN);
+  } catch(error) {
+    core.debug('Error while trying to create github client.');
+    core.debug(error.stack)
+    core.setFailed(error.message);    
+  }
   try {
     core.debug((new Date()).toTimeString());
 
     const {issue} = github.context.payload;
     const parsingRulePath = core.getInput('PARSING_RULES_PATH');
-
-    const octokit = new github.GitHub(process.env.ADMIN_TOKEN);
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     const parserRules = await getParserRules({octokit, owner, repo, path: parsingRulePath});
@@ -565,6 +571,7 @@ async function run() {
     core.info((new Date()).toTimeString())
   }
   catch (error) {
+    core.debug(error.stack)
     core.setFailed(error.message);
   }
 }
