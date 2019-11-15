@@ -514,9 +514,6 @@ module.exports = require("os");
 /***/ 104:
 /***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
 
-const fs = __webpack_require__(747);
-const { promisify } = __webpack_require__(669);
-
 const core = __webpack_require__(470);
 const github = __webpack_require__(469);
 
@@ -527,23 +524,18 @@ async function getParserRules({octokit, owner, repo, path}) {
   return JSON.parse(parserRules);
 }
 
-// most @actions toolkit packages have async methods
 async function run() {
   try {
     core.debug((new Date()).toTimeString());
 
-    const readfile = promisify(fs.readFile);
-    const octokit = new github.GitHub(process.env.GITHUB_TOKEN);
+    const {issue} = github.context.payload;
     const parsingRulePath = core.getInput('PARSING_RULES_PATH');
 
-    const eventData = await readfile(process.env.GITHUB_EVENT_PATH);
-    const {issue} = JSON.parse(eventData);
+    const octokit = new github.GitHub(core.getInput('ADMIN_TOKEN'));
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     const parserRules = await getParserRules({octokit, owner, repo, path: parsingRulePath});
 
-    // TODO: Determine if the issue body format: HTML or just text.
-    // The parsing strategy will depend on this.
     const emailMatch = issue.body.match(parserRules.email.regex);
     const usernameMatch = issue.body.match(parserRules.username.regex);
 
@@ -557,16 +549,18 @@ async function run() {
     if(email) {
       const result = await octokit.orgs.createInvitation({
         org: owner,
-        role: "direct_member",
+        role: core.getInput("USER_ROLE"),
         email
       });
-      core.info(result);
+      core.debug(result);
+      core.info(`User with email ${email} has been invited into the org.`);
     } else {
       const result = await octokit.orgs.addOrUpdateMembership({
         org: owner,
         username
       })
-      core.info(result);
+      core.debug(result);
+      core.info(`User with username ${username} has been invited into the org.`);
     }
     core.info((new Date()).toTimeString())
   }
@@ -575,7 +569,7 @@ async function run() {
   }
 }
 
-run()
+run();
 
 
 /***/ }),
