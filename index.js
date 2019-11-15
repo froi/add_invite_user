@@ -4,8 +4,8 @@ const github = require('@actions/github');
 async function getParserRules({octokit, owner, repo, path}) {
   const parserRules = await octokit.repos.getContents({owner, repo, path});
   core.debug("in getParserRules")
-  core.debug(parserRules)
-  return JSON.parse(parserRules);
+  core.debug(JSON.stringify9parserRules))
+  return parserRules;
 }
 
 async function run() {
@@ -15,7 +15,7 @@ async function run() {
   } catch(error) {
     core.debug('Error while trying to create github client.');
     core.debug(error.stack)
-    core.setFailed(error.message);    
+    core.setFailed(error.message); 
   }
   try {
     core.debug((new Date()).toTimeString());
