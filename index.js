@@ -36,11 +36,12 @@ async function run() {
 
     const email = emailMatch.groups.email;
     const username = usernameMatch.groups.username;
+    const role = core.getInput("USER_ROLE") || 'direct_member';
 
     if(email) {
       const result = await octokit.orgs.createInvitation({
         org: owner,
-        role: core.getInput("USER_ROLE"),
+        role,
         email
       });
       core.debug(result);
