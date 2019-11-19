@@ -518,10 +518,11 @@ const core = __webpack_require__(470);
 const github = __webpack_require__(469);
 
 async function getParserRules({octokit, owner, repo, path}) {
-  const parserRules = await octokit.repos.getContents({owner, repo, path});
+  const result = await octokit.repos.getContents({owner, repo, path});
   core.debug("in getParserRules")
-  core.debug(JSON.stringify(parserRules))
-  return parserRules;
+  const content = Buffer.from(result.data.content, 'base64').toString('ascii');
+  core.debug(JSON.stringify(content))
+  return JSON.parse(content);
 }
 
 async function run() {
