@@ -1,4 +1,4 @@
-name: "test-local"
+name: "Lint and Test"
 on:
   pull_request:
   push:
@@ -11,9 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-
-    - run: npm ci
-    - run: npm test
-    - uses: ./
+    - uses: actions/setup-node@v1
       with:
-        milliseconds: 1000
+        node-version: '12.x'
+    - uses: actions/cache@v1
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+    - name: Install dependencies
+      run: npm ci
+    - name: Prettier format check
+      run: npm run format-check
+    - name: Lint Check
+      run: npm run lint
+    - nmae: Run tests
+      run: npm test
