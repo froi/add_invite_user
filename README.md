@@ -15,7 +15,7 @@ Create a workflow `.yml` file in your repositories `.github/workflows` directory
 For more information on these inputs, see the [API Documentation](https://developer.github.com/v3/repos/releases/#input-2)
 
 - `PARSING_RULES_PATH`: The path to the GitHub Issue parsing rules. For more info on the contents of this file please see the [Parsing Rules](#parsing-rules) section below.
-- `USER_ROLE`; The default role to apply to the user being invited to the organization. We recommend using `direct_member`. Please use caution when changing this value, you could give users too much privileges to your organization.
+- `USER_ROLE`: The default role to apply to the user being invited to the organization. We recommend using `direct_member`. Please use caution when changing this value, you could give users too much privileges to your organization.
 
 ### Environment Variables
 
@@ -33,11 +33,11 @@ The GitHub Actions context has access to a `GITHUB_TOKEN` environment variables 
 A JSON file with the rules you need to define to parse the GitHub Issue body and extract the data needed to create an invitation to your GitHub organization.
 
 #### Structure
- 
+
 The action expects the use of regular expressions with named capture groups. There are two base named capture groups that the Action expects:
 
-- __username__
-- __email__
+- **username**
+- **email**
 
 ```JSON
 {
@@ -72,27 +72,25 @@ on:
   issues:
     types: [labeled]
 
-
 jobs:
   create-invite:
-
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Get issue data
-      uses: froi/add_invite_user@release/v1
-      with:
-        PARSING_RULES_PATH: ".github/parsing_rules.json"
-        USER_ROLE: "direct_member"
-      env:
-        ADMIN_TOKEN: ${{secrets.ADMIN_TOKEN}}
+      - uses: actions/checkout@v1
+      - name: Get issue data
+        uses: froi/add_invite_user@release/v1
+        with:
+          PARSING_RULES_PATH: ".github/parsing_rules.json"
+          USER_ROLE: "direct_member"
+        env:
+          ADMIN_TOKEN: ${{secrets.ADMIN_TOKEN}}
 ```
 
 This will workflow will create a new organization invitation for the user information found in the issue body.
 
 ### Example Parsing Rules file
 
-```JSON  
+```JSON
 {
   "username": {
     "regex": "<p>Name of Requester:\\s*(?<username>.+?)<\\/p>"
