@@ -1,9 +1,10 @@
 {
-  "name": "javascript-action",
+  "name": "add-invite-user",
   "version": "1.0.6",
-  "description": "JavaScript Action Template",
-  "main": "index.js",
+  "description": "GitHub Action to invite a user to a GitHub organization.",
+  "main": "dist/index.js",
   "scripts": {
+    "format-check": "prettier --check **/*",
     "lint": "eslint index.js",
     "package": "ncc build index.js -o dist",
     "test": "eslint index.js && jest",
@@ -12,19 +13,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/javascript-action.git"
+    "url": "git+https://github.com/froi/add_invite_user.git"
   },
   "keywords": [
     "GitHub",
     "Actions",
-    "JavaScript"
+    "JavaScript",
+    "Onboarding",
+    ""
   ],
-  "author": "GitHub",
+  "author": "Froilan Irizarry Rivera",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/actions/javascript-action/issues"
+    "url": "https://github.com/froi/add_invite_user/issues"
   },
-  "homepage": "https://github.com/actions/javascript-action#readme",
+  "homepage": "https://github.com/froi/add_invite_user#readme",
   "dependencies": {
     "@actions/core": "^1.1.1",
     "@actions/github": "^1.1.0"
