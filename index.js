@@ -43,7 +43,7 @@ function buildStatusFromActions({ actions, errors }) {
   }
 
   if (errors) {
-    status += __generateMessageBody(
+    status = __generateMessageBody(
       outdent`
             # Errors encountered while processing
 
