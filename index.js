@@ -55,6 +55,7 @@ function buildStatusFromActions({ actions, errors }) {
 async function run() {
   let octokit;
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+  const { issue } = github.context.payload;
   let errors = [];
   let actions = [];
   try {
@@ -69,7 +70,6 @@ async function run() {
     try {
       core.debug(new Date().toTimeString());
 
-      const { issue } = github.context.payload;
       const parsingRulePath = core.getInput("PARSING_RULES_PATH");
 
       const parserRules = await getParserRules({
