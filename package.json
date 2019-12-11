@@ -4,7 +4,7 @@
   "description": "GitHub Action to invite a user to a GitHub organization.",
   "main": "dist/index.js",
   "scripts": {
-    "format-check": "prettier --check **/*",
+    "format-check": "prettier --check **/*.js",
     "lint": "eslint index.js",
     "package": "ncc build index.js -o dist",
     "test": "eslint index.js && jest",
@@ -35,6 +35,7 @@
   "devDependencies": {
     "@zeit/ncc": "^0.20.5",
     "eslint": "^6.3.0",
+    "eslint-plugin-jest": "^23.1.1",
     "husky": "^3.1.0",
     "jest": "^24.9.0",
     "lint-staged": "^9.5.0",
