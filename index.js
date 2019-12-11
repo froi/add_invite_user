@@ -65,6 +65,7 @@ async function run() {
   } catch (error) {
     core.debug("Error while trying to create github client.");
     core.debug(error.stack);
+    core.setFailed(error.message);
   }
   try {
     core.debug(new Date().toTimeString());
