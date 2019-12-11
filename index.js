@@ -60,17 +60,18 @@ async function run() {
   const { issue } = github.context.payload;
   let errors = [];
   let actions = [];
+
   try {
     octokit = new github.GitHub(process.env.ADMIN_TOKEN);
   } catch (error) {
     core.debug("Error while trying to create github client.");
     core.debug(error.stack);
+    core.setFailed(error.message);
   }
   try {
     core.debug(new Date().toTimeString());
 
     const parsingRulePath = core.getInput("PARSING_RULES_PATH");
-
     const parserRules = await getParserRules({
       octokit,
       owner,
@@ -101,6 +102,7 @@ async function run() {
     } else {
       throw "Email not found in issue";
     }
+
     core.info(new Date().toTimeString());
     writeStatusToIssue({
       octokit: octokit,
@@ -120,6 +122,7 @@ async function run() {
       issue: issue,
       status: buildStatusFromActions({ errors: errors })
     });
+
     core.setFailed(error.message);
   }
 }
