@@ -102,6 +102,13 @@ async function run() {
       throw "Email not found in issue";
     }
     core.info(new Date().toTimeString());
+    writeStatusToIssue({
+      octokit: octokit,
+      owner: owner,
+      repo: repo,
+      issue: issue,
+      status: buildStatusFromActions({ actions: actions })
+    });
   } catch (error) {
     core.debug(error.stack);
     errors.push(error.message);
@@ -115,13 +122,6 @@ async function run() {
     });
     core.setFailed(error.message);
   }
-  writeStatusToIssue({
-    octokit: octokit,
-    owner: owner,
-    repo: repo,
-    issue: issue,
-    status: buildStatusFromActions({ actions: actions })
-  });
 }
 
 run();
