@@ -34,6 +34,7 @@ async function run() {
 
     const emailMatch = issue.body.match(parserRules.email.regex);
 
+    core.debug(issue.body);
     if (!emailMatch) {
       throw Error("Parsing error: email not found.");
     }
