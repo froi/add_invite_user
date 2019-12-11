@@ -114,6 +114,7 @@ async function run() {
       octokit: octokit,
       owner: owner,
       repo: repo,
+      issue: issue,
       status: buildStatusFromActions((errors = actions))
     });
     core.setFailed(error.message);
@@ -122,6 +123,7 @@ async function run() {
     octokit: octokit,
     owner: owner,
     repo: repo,
+    issue: issue,
     status: buildStatusFromActions({ actions: actions })
   });
 }
