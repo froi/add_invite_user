@@ -7,4 +7,4 @@ inputs:
     default: '.github/parsing_rules.json'
 runs:
   using: 'node12'
-  main: 'dist/index.js'
+  main: './index.js'
