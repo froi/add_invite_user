@@ -106,10 +106,20 @@ async function run() {
       }
       core.info(new Date().toTimeString());
     } catch (error) {
+      core.debug("I am an error");
       core.debug(error.stack);
       errors.push(error);
+      core.debug("Errors:");
+      core.debug(errors);
       throw error;
     }
+    writeStatusToIssue({
+      octokit: octokit,
+      owner: owner,
+      repo: repo,
+      issue: issue,
+      status: buildStatusFromActions({ actions: actions })
+    });
   } catch (error) {
     // write error to issue
     writeStatusToIssue({
@@ -117,17 +127,10 @@ async function run() {
       owner: owner,
       repo: repo,
       issue: issue,
-      status: buildStatusFromActions((errors = actions))
+      status: buildStatusFromActions({ errors: errors })
     });
     core.setFailed(error.message);
   }
-  writeStatusToIssue({
-    octokit: octokit,
-    owner: owner,
-    repo: repo,
-    issue: issue,
-    status: buildStatusFromActions({ actions: actions })
-  });
 }
 
 run();
