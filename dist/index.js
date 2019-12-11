@@ -516,6 +516,7 @@ module.exports = require("os");
 
 const core = __webpack_require__(470);
 const github = __webpack_require__(469);
+const outdent = __webpack_require__(438);
 
 async function getParserRules({ octokit, owner, repo, path }) {
   const result = await octokit.repos.getContents({ owner, repo, path });
@@ -525,22 +526,67 @@ async function getParserRules({ octokit, owner, repo, path }) {
   return JSON.parse(content);
 }
 
+async function writeStatusToIssue({ octokit, owner, repo, issue, status }) {
+  return await octokit.issues.createComment({
+    owner: owner,
+    repo: repo,
+    issue_number: issue.number,
+    body: status
+  });
+}
+
+function __generateMessageBody(messageSuffix, actions) {
+  let message = messageSuffix;
+
+  actions.forEach(action => {
+    message += `* ${action}  \n`;
+  });
+  return message;
+}
+
+function buildStatusFromActions({ actions, errors }) {
+  let status;
+  if (actions) {
+    status = __generateMessageBody(
+      outdent`
+            # Issue processed
+
+            ## The following actions were taken:
+
+        `,
+      actions
+    );
+  }
+
+  if (errors) {
+    status = __generateMessageBody(
+      outdent`
+            # Errors encountered while processing
+
+        `,
+      errors
+    );
+  }
+  return status;
+}
+
 async function run() {
   let octokit;
+  const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+  const { issue } = github.context.payload;
+  let errors = [];
+  let actions = [];
   try {
     octokit = new github.GitHub(process.env.ADMIN_TOKEN);
   } catch (error) {
     core.debug("Error while trying to create github client.");
     core.debug(error.stack);
-    core.setFailed(error.message);
   }
   try {
     core.debug(new Date().toTimeString());
 
-    const { issue } = github.context.payload;
     const parsingRulePath = core.getInput("PARSING_RULES_PATH");
 
-    const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
     const parserRules = await getParserRules({
       octokit,
       owner,
@@ -565,14 +611,31 @@ async function run() {
         email
       });
       core.debug(result);
-      core.info(`User with email ${email} has been invited into the org.`);
+      let actionMessage = `User with email ${email} has been invited into the org.`;
+      core.info(actionMessage);
+      actions.push(actionMessage);
     } else {
       throw "Email not found in issue";
     }
-
     core.info(new Date().toTimeString());
+    writeStatusToIssue({
+      octokit: octokit,
+      owner: owner,
+      repo: repo,
+      issue: issue,
+      status: buildStatusFromActions({ actions: actions })
+    });
   } catch (error) {
     core.debug(error.stack);
+    errors.push(error.message);
+    // write error to issue
+    writeStatusToIssue({
+      octokit: octokit,
+      owner: owner,
+      repo: repo,
+      issue: issue,
+      status: buildStatusFromActions({ errors: errors })
+    });
     core.setFailed(error.message);
   }
 }
@@ -1794,7 +1857,7 @@ exports.getUserAgent = getUserAgent;
 /***/ 215:
 /***/ (function(module) {
 
-module.exports = {"_args":[["@octokit/rest@16.34.0","/Users/chocrates/workspace/add_invite_user"]],"_from":"@octokit/rest@16.34.0","_id":"@octokit/rest@16.34.0","_inBundle":false,"_integrity":"sha512-EBe5qMQQOZRuezahWCXCnSe0J6tAqrW2hrEH9U8esXzKor1+HUDf8jgImaZf5lkTyWCQA296x9kAH5c0pxEgVQ==","_location":"/@octokit/rest","_phantomChildren":{"os-name":"3.1.0"},"_requested":{"type":"version","registry":true,"raw":"@octokit/rest@16.34.0","name":"@octokit/rest","escapedName":"@octokit%2frest","scope":"@octokit","rawSpec":"16.34.0","saveSpec":null,"fetchSpec":"16.34.0"},"_requiredBy":["/@actions/github"],"_resolved":"https://registry.npmjs.org/@octokit/rest/-/rest-16.34.0.tgz","_spec":"16.34.0","_where":"/Users/chocrates/workspace/add_invite_user","author":{"name":"Gregor Martynus","url":"https://github.com/gr2m"},"bugs":{"url":"https://github.com/octokit/rest.js/issues"},"bundlesize":[{"path":"./dist/octokit-rest.min.js.gz","maxSize":"33 kB"}],"contributors":[{"name":"Mike de Boer","email":"info@mikedeboer.nl"},{"name":"Fabian Jakobs","email":"fabian@c9.io"},{"name":"Joe Gallo","email":"joe@brassafrax.com"},{"name":"Gregor Martynus","url":"https://github.com/gr2m"}],"dependencies":{"@octokit/request":"^5.2.0","@octokit/request-error":"^1.0.2","atob-lite":"^2.0.0","before-after-hook":"^2.0.0","btoa-lite":"^1.0.0","deprecation":"^2.0.0","lodash.get":"^4.4.2","lodash.set":"^4.3.2","lodash.uniq":"^4.5.0","octokit-pagination-methods":"^1.1.0","once":"^1.4.0","universal-user-agent":"^4.0.0"},"description":"GitHub REST API client for Node.js","devDependencies":{"@gimenete/type-writer":"^0.1.3","@octokit/fixtures-server":"^5.0.6","@octokit/graphql":"^4.2.0","@types/node":"^12.0.0","bundlesize":"^0.18.0","chai":"^4.1.2","compression-webpack-plugin":"^3.0.0","cypress":"^3.0.0","glob":"^7.1.2","http-proxy-agent":"^2.1.0","lodash.camelcase":"^4.3.0","lodash.merge":"^4.6.1","lodash.upperfirst":"^4.3.1","mkdirp":"^0.5.1","mocha":"^6.0.0","mustache":"^3.0.0","nock":"^11.3.3","npm-run-all":"^4.1.2","nyc":"^14.0.0","prettier":"^1.14.2","proxy":"^1.0.0","semantic-release":"^15.0.0","sinon":"^7.2.4","sinon-chai":"^3.0.0","sort-keys":"^4.0.0","string-to-arraybuffer":"^1.0.0","string-to-jsdoc-comment":"^1.0.0","typescript":"^3.3.1","webpack":"^4.0.0","webpack-bundle-analyzer":"^3.0.0","webpack-cli":"^3.0.0"},"files":["index.js","index.d.ts","lib","plugins"],"homepage":"https://github.com/octokit/rest.js#readme","keywords":["octokit","github","rest","api-client"],"license":"MIT","name":"@octokit/rest","nyc":{"ignore":["test"]},"publishConfig":{"access":"public"},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"repository":{"type":"git","url":"git+https://github.com/octokit/rest.js.git"},"scripts":{"build":"npm-run-all build:*","build:browser":"npm-run-all build:browser:*","build:browser:development":"webpack --mode development --entry . --output-library=Octokit --output=./dist/octokit-rest.js --profile --json > dist/bundle-stats.json","build:browser:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=Octokit --output-path=./dist --output-filename=octokit-rest.min.js --devtool source-map","build:ts":"npm run -s update-endpoints:typescript","coverage":"nyc report --reporter=html && open coverage/index.html","generate-bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","lint":"prettier --check '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","lint:fix":"prettier --write '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","postvalidate:ts":"tsc --noEmit --target es6 test/typescript-validate.ts","prebuild:browser":"mkdirp dist/","pretest":"npm run -s lint","prevalidate:ts":"npm run -s build:ts","start-fixtures-server":"octokit-fixtures-server","test":"nyc mocha test/mocha-node-setup.js \"test/*/**/*-test.js\"","test:browser":"cypress run --browser chrome","update-endpoints":"npm-run-all update-endpoints:*","update-endpoints:code":"node scripts/update-endpoints/code","update-endpoints:fetch-json":"node scripts/update-endpoints/fetch-json","update-endpoints:typescript":"node scripts/update-endpoints/typescript","validate:ts":"tsc --target es6 --noImplicitAny index.d.ts"},"types":"index.d.ts","version":"16.34.0"};
+module.exports = {"name":"@octokit/rest","version":"16.34.0","publishConfig":{"access":"public"},"description":"GitHub REST API client for Node.js","keywords":["octokit","github","rest","api-client"],"author":"Gregor Martynus (https://github.com/gr2m)","contributors":[{"name":"Mike de Boer","email":"info@mikedeboer.nl"},{"name":"Fabian Jakobs","email":"fabian@c9.io"},{"name":"Joe Gallo","email":"joe@brassafrax.com"},{"name":"Gregor Martynus","url":"https://github.com/gr2m"}],"repository":"https://github.com/octokit/rest.js","dependencies":{"@octokit/request":"^5.2.0","@octokit/request-error":"^1.0.2","atob-lite":"^2.0.0","before-after-hook":"^2.0.0","btoa-lite":"^1.0.0","deprecation":"^2.0.0","lodash.get":"^4.4.2","lodash.set":"^4.3.2","lodash.uniq":"^4.5.0","octokit-pagination-methods":"^1.1.0","once":"^1.4.0","universal-user-agent":"^4.0.0"},"devDependencies":{"@gimenete/type-writer":"^0.1.3","@octokit/fixtures-server":"^5.0.6","@octokit/graphql":"^4.2.0","@types/node":"^12.0.0","bundlesize":"^0.18.0","chai":"^4.1.2","compression-webpack-plugin":"^3.0.0","cypress":"^3.0.0","glob":"^7.1.2","http-proxy-agent":"^2.1.0","lodash.camelcase":"^4.3.0","lodash.merge":"^4.6.1","lodash.upperfirst":"^4.3.1","mkdirp":"^0.5.1","mocha":"^6.0.0","mustache":"^3.0.0","nock":"^11.3.3","npm-run-all":"^4.1.2","nyc":"^14.0.0","prettier":"^1.14.2","proxy":"^1.0.0","semantic-release":"^15.0.0","sinon":"^7.2.4","sinon-chai":"^3.0.0","sort-keys":"^4.0.0","string-to-arraybuffer":"^1.0.0","string-to-jsdoc-comment":"^1.0.0","typescript":"^3.3.1","webpack":"^4.0.0","webpack-bundle-analyzer":"^3.0.0","webpack-cli":"^3.0.0"},"types":"index.d.ts","scripts":{"coverage":"nyc report --reporter=html && open coverage/index.html","lint":"prettier --check '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","lint:fix":"prettier --write '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","pretest":"npm run -s lint","test":"nyc mocha test/mocha-node-setup.js \"test/*/**/*-test.js\"","test:browser":"cypress run --browser chrome","build":"npm-run-all build:*","build:ts":"npm run -s update-endpoints:typescript","prebuild:browser":"mkdirp dist/","build:browser":"npm-run-all build:browser:*","build:browser:development":"webpack --mode development --entry . --output-library=Octokit --output=./dist/octokit-rest.js --profile --json > dist/bundle-stats.json","build:browser:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=Octokit --output-path=./dist --output-filename=octokit-rest.min.js --devtool source-map","generate-bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","update-endpoints":"npm-run-all update-endpoints:*","update-endpoints:fetch-json":"node scripts/update-endpoints/fetch-json","update-endpoints:code":"node scripts/update-endpoints/code","update-endpoints:typescript":"node scripts/update-endpoints/typescript","prevalidate:ts":"npm run -s build:ts","validate:ts":"tsc --target es6 --noImplicitAny index.d.ts","postvalidate:ts":"tsc --noEmit --target es6 test/typescript-validate.ts","start-fixtures-server":"octokit-fixtures-server"},"license":"MIT","files":["index.js","index.d.ts","lib","plugins"],"nyc":{"ignore":["test"]},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"bundlesize":[{"path":"./dist/octokit-rest.min.js.gz","maxSize":"33 kB"}],"_resolved":"https://registry.npmjs.org/@octokit/rest/-/rest-16.34.0.tgz","_integrity":"sha512-EBe5qMQQOZRuezahWCXCnSe0J6tAqrW2hrEH9U8esXzKor1+HUDf8jgImaZf5lkTyWCQA296x9kAH5c0pxEgVQ==","_from":"@octokit/rest@16.34.0"};
 
 /***/ }),
 
@@ -3875,7 +3938,7 @@ function normalizePaginatedListResponse(octokit, url, response) {
 /***/ 314:
 /***/ (function(module) {
 
-module.exports = {"_args":[["@octokit/graphql@2.1.3","/Users/chocrates/workspace/add_invite_user"]],"_from":"@octokit/graphql@2.1.3","_id":"@octokit/graphql@2.1.3","_inBundle":false,"_integrity":"sha512-XoXJqL2ondwdnMIW3wtqJWEwcBfKk37jO/rYkoxNPEVeLBDGsGO1TCWggrAlq3keGt/O+C/7VepXnukUxwt5vA==","_location":"/@octokit/graphql","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"@octokit/graphql@2.1.3","name":"@octokit/graphql","escapedName":"@octokit%2fgraphql","scope":"@octokit","rawSpec":"2.1.3","saveSpec":null,"fetchSpec":"2.1.3"},"_requiredBy":["/@actions/github"],"_resolved":"https://registry.npmjs.org/@octokit/graphql/-/graphql-2.1.3.tgz","_spec":"2.1.3","_where":"/Users/chocrates/workspace/add_invite_user","author":{"name":"Gregor Martynus","url":"https://github.com/gr2m"},"bugs":{"url":"https://github.com/octokit/graphql.js/issues"},"bundlesize":[{"path":"./dist/octokit-graphql.min.js.gz","maxSize":"5KB"}],"dependencies":{"@octokit/request":"^5.0.0","universal-user-agent":"^2.0.3"},"description":"GitHub GraphQL API client for browsers and Node","devDependencies":{"chai":"^4.2.0","compression-webpack-plugin":"^2.0.0","coveralls":"^3.0.3","cypress":"^3.1.5","fetch-mock":"^7.3.1","mkdirp":"^0.5.1","mocha":"^6.0.0","npm-run-all":"^4.1.3","nyc":"^14.0.0","semantic-release":"^15.13.3","simple-mock":"^0.8.0","standard":"^12.0.1","webpack":"^4.29.6","webpack-bundle-analyzer":"^3.1.0","webpack-cli":"^3.2.3"},"files":["lib"],"homepage":"https://github.com/octokit/graphql.js#readme","keywords":["octokit","github","api","graphql"],"license":"MIT","main":"index.js","name":"@octokit/graphql","publishConfig":{"access":"public"},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"repository":{"type":"git","url":"git+https://github.com/octokit/graphql.js.git"},"scripts":{"build":"npm-run-all build:*","build:development":"webpack --mode development --entry . --output-library=octokitGraphql --output=./dist/octokit-graphql.js --profile --json > dist/bundle-stats.json","build:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=octokitGraphql --output-path=./dist --output-filename=octokit-graphql.min.js --devtool source-map","bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","coverage":"nyc report --reporter=html && open coverage/index.html","coverage:upload":"nyc report --reporter=text-lcov | coveralls","prebuild":"mkdirp dist/","pretest":"standard","test":"nyc mocha test/*-test.js","test:browser":"cypress run --browser chrome"},"standard":{"globals":["describe","before","beforeEach","afterEach","after","it","expect"]},"version":"2.1.3"};
+module.exports = {"name":"@octokit/graphql","version":"2.1.3","publishConfig":{"access":"public"},"description":"GitHub GraphQL API client for browsers and Node","main":"index.js","scripts":{"prebuild":"mkdirp dist/","build":"npm-run-all build:*","build:development":"webpack --mode development --entry . --output-library=octokitGraphql --output=./dist/octokit-graphql.js --profile --json > dist/bundle-stats.json","build:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=octokitGraphql --output-path=./dist --output-filename=octokit-graphql.min.js --devtool source-map","bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","coverage":"nyc report --reporter=html && open coverage/index.html","coverage:upload":"nyc report --reporter=text-lcov | coveralls","pretest":"standard","test":"nyc mocha test/*-test.js","test:browser":"cypress run --browser chrome"},"repository":{"type":"git","url":"https://github.com/octokit/graphql.js.git"},"keywords":["octokit","github","api","graphql"],"author":"Gregor Martynus (https://github.com/gr2m)","license":"MIT","bugs":{"url":"https://github.com/octokit/graphql.js/issues"},"homepage":"https://github.com/octokit/graphql.js#readme","dependencies":{"@octokit/request":"^5.0.0","universal-user-agent":"^2.0.3"},"devDependencies":{"chai":"^4.2.0","compression-webpack-plugin":"^2.0.0","coveralls":"^3.0.3","cypress":"^3.1.5","fetch-mock":"^7.3.1","mkdirp":"^0.5.1","mocha":"^6.0.0","npm-run-all":"^4.1.3","nyc":"^14.0.0","semantic-release":"^15.13.3","simple-mock":"^0.8.0","standard":"^12.0.1","webpack":"^4.29.6","webpack-bundle-analyzer":"^3.1.0","webpack-cli":"^3.2.3"},"bundlesize":[{"path":"./dist/octokit-graphql.min.js.gz","maxSize":"5KB"}],"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"standard":{"globals":["describe","before","beforeEach","afterEach","after","it","expect"]},"files":["lib"],"_resolved":"https://registry.npmjs.org/@octokit/graphql/-/graphql-2.1.3.tgz","_integrity":"sha512-XoXJqL2ondwdnMIW3wtqJWEwcBfKk37jO/rYkoxNPEVeLBDGsGO1TCWggrAlq3keGt/O+C/7VepXnukUxwt5vA==","_from":"@octokit/graphql@2.1.3"};
 
 /***/ }),
 
@@ -4852,6 +4915,182 @@ function escape(s) {
         .replace(/;/g, '%3B');
 }
 //# sourceMappingURL=command.js.map
+
+/***/ }),
+
+/***/ 438:
+/***/ (function(module, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+// In the absence of a WeakSet or WeakMap implementation, don't break, but don't cache either.
+function noop() {
+    var args = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        args[_i] = arguments[_i];
+    }
+}
+function createWeakMap() {
+    if (typeof WeakMap !== 'undefined') {
+        return new WeakMap();
+    }
+    else {
+        return fakeSetOrMap();
+    }
+}
+/**
+ * Creates and returns a no-op implementation of a WeakMap / WeakSet that never stores anything.
+ */
+function fakeSetOrMap() {
+    return {
+        add: noop,
+        delete: noop,
+        get: noop,
+        set: noop,
+        has: function (k) { return false; },
+    };
+}
+// Safe hasOwnProperty
+var hop = Object.prototype.hasOwnProperty;
+var has = function (obj, prop) {
+    return hop.call(obj, prop);
+};
+// Copy all own enumerable properties from source to target
+function extend(target, source) {
+    for (var prop in source) {
+        if (has(source, prop)) {
+            target[prop] = source[prop];
+        }
+    }
+    return target;
+}
+var reLeadingNewline = /^[ \t]*(?:\r\n|\r|\n)/;
+var reTrailingNewline = /(?:\r\n|\r|\n)[ \t]*$/;
+var reStartsWithNewlineOrIsEmpty = /^(?:[\r\n]|$)/;
+var reDetectIndentation = /(?:\r\n|\r|\n)([ \t]*)(?:[^ \t\r\n]|$)/;
+var reOnlyWhitespaceWithAtLeastOneNewline = /^[ \t]*[\r\n][ \t\r\n]*$/;
+function _outdentArray(strings, firstInterpolatedValueSetsIndentationLevel, options) {
+    // If first interpolated value is a reference to outdent,
+    // determine indentation level from the indentation of the interpolated value.
+    var indentationLevel = 0;
+    var match = strings[0].match(reDetectIndentation);
+    if (match) {
+        indentationLevel = match[1].length;
+    }
+    var reSource = "(\\r\\n|\\r|\\n).{0," + indentationLevel + "}";
+    var reMatchIndent = new RegExp(reSource, 'g');
+    if (firstInterpolatedValueSetsIndentationLevel) {
+        strings = strings.slice(1);
+    }
+    var newline = options.newline, trimLeadingNewline = options.trimLeadingNewline, trimTrailingNewline = options.trimTrailingNewline;
+    var normalizeNewlines = typeof newline === 'string';
+    var l = strings.length;
+    var outdentedStrings = strings.map(function (v, i) {
+        // Remove leading indentation from all lines
+        v = v.replace(reMatchIndent, '$1');
+        // Trim a leading newline from the first string
+        if (i === 0 && trimLeadingNewline) {
+            v = v.replace(reLeadingNewline, '');
+        }
+        // Trim a trailing newline from the last string
+        if (i === l - 1 && trimTrailingNewline) {
+            v = v.replace(reTrailingNewline, '');
+        }
+        // Normalize newlines
+        if (normalizeNewlines) {
+            v = v.replace(/\r\n|\n|\r/g, function (_) { return newline; });
+        }
+        return v;
+    });
+    return outdentedStrings;
+}
+function concatStringsAndValues(strings, values) {
+    var ret = '';
+    for (var i = 0, l = strings.length; i < l; i++) {
+        ret += strings[i];
+        if (i < l - 1) {
+            ret += values[i];
+        }
+    }
+    return ret;
+}
+function isTemplateStringsArray(v) {
+    return has(v, 'raw') && has(v, 'length');
+}
+/**
+ * It is assumed that opts will not change.  If this is a problem, clone your options object and pass the clone to
+ * makeInstance
+ * @param options
+ * @return {outdent}
+ */
+function createInstance(options) {
+    /** Cache of pre-processed template literal arrays */
+    var arrayAutoIndentCache = createWeakMap();
+    /**
+     * Cache of pre-processed template literal arrays, where first interpolated value is a reference to outdent,
+     * before interpolated values are injected.
+     */
+    var arrayFirstInterpSetsIndentCache = createWeakMap();
+    function outdent(stringsOrOptions) {
+        var values = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            values[_i - 1] = arguments[_i];
+        }
+        /* tslint:enable:no-shadowed-variable */
+        if (isTemplateStringsArray(stringsOrOptions)) {
+            var strings = stringsOrOptions;
+            // Is first interpolated value a reference to outdent, alone on its own line, without any preceding non-whitespace?
+            var firstInterpolatedValueSetsIndentationLevel = (values[0] === outdent || values[0] === defaultOutdent) &&
+                reOnlyWhitespaceWithAtLeastOneNewline.test(strings[0]) &&
+                reStartsWithNewlineOrIsEmpty.test(strings[1]);
+            // Perform outdentation
+            var cache = firstInterpolatedValueSetsIndentationLevel ? arrayFirstInterpSetsIndentCache : arrayAutoIndentCache;
+            var renderedArray = cache.get(strings);
+            if (!renderedArray) {
+                renderedArray = _outdentArray(strings, firstInterpolatedValueSetsIndentationLevel, options);
+                cache.set(strings, renderedArray);
+            }
+            /** If no interpolated values, skip concatenation step */
+            if (values.length === 0) {
+                return renderedArray[0];
+            }
+            /** Concatenate string literals with interpolated values */
+            var rendered = concatStringsAndValues(renderedArray, firstInterpolatedValueSetsIndentationLevel ? values.slice(1) : values);
+            return rendered;
+        }
+        else {
+            // Create and return a new instance of outdent with the given options
+            return createInstance(extend(extend({}, options), stringsOrOptions || {}));
+        }
+    }
+    var fullOutdent = extend(outdent, {
+        string: function (str) {
+            return _outdentArray([str], false, options)[0];
+        },
+    });
+    return fullOutdent;
+}
+var defaultOutdent = createInstance({
+    trimLeadingNewline: true,
+    trimTrailingNewline: true,
+});
+exports.outdent = defaultOutdent;
+// Named exports.  Simple and preferred.
+// import outdent from 'outdent';
+exports.default = defaultOutdent;
+if (true) {
+    // In webpack harmony-modules environments, module.exports is read-only,
+    // so we fail gracefully.
+    try {
+        module.exports = defaultOutdent;
+        Object.defineProperty(defaultOutdent, '__esModule', { value: true });
+        defaultOutdent.default = defaultOutdent;
+        defaultOutdent.outdent = defaultOutdent;
+    }
+    catch (e) { }
+}
+//# sourceMappingURL=index.js.map
 
 /***/ }),
 
