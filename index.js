@@ -10,13 +10,17 @@ async function getParserRules({octokit, owner, repo, path}) {
 }
 
 async function run() {
-  let octokit
+    let octokit
+    let errors = []
+    let actions = []
+    try {
   try {
     octokit = new github.GitHub(process.env.ADMIN_TOKEN);
   } catch(error) {
     core.debug('Error while trying to create github client.');
-    core.debug(error.stack)
-    core.setFailed(error.message); 
+      core.debug(error.stack)
+      errors.push(error)
+      throw error
   }
   try {
     core.debug((new Date()).toTimeString());
@@ -57,9 +61,13 @@ async function run() {
     core.info((new Date()).toTimeString())
   }
   catch (error) {
-    core.debug(error.stack)
-    core.setFailed(error.message);
+      core.debug(error.stack)
+      errors.push(error)
+      throw error
   }
+    } catch(error) {
+        core.setFailed(error.message);
+    }
 }
 
 run();
