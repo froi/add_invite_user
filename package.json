@@ -4,7 +4,7 @@
   "description": "GitHub Action to invite a user to a GitHub organization.",
   "main": "dist/index.js",
   "scripts": {
-    "format-check": "prettier --check **/*",
+    "format-check": "prettier --check **/*.js",
     "lint": "eslint index.js",
     "package": "ncc build index.js -o dist",
     "test": "eslint index.js && jest",
