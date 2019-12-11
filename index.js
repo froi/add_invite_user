@@ -36,6 +36,7 @@ function buildStatusFromActions({ actions, errors }) {
             # Issue processed
 
             ## The following actions were taken:
+
         `,
       actions
     );
@@ -45,6 +46,7 @@ function buildStatusFromActions({ actions, errors }) {
     status += __generateMessageBody(
       outdent`
             # Errors encountered while processing
+
         `,
       errors
     );
