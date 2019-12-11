@@ -1,5 +1,6 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
+const outdent = require("outdent");
 
 async function getParserRules({ octokit, owner, repo, path }) {
   const result = await octokit.repos.getContents({ owner, repo, path });
@@ -9,22 +10,67 @@ async function getParserRules({ octokit, owner, repo, path }) {
   return JSON.parse(content);
 }
 
+async function writeStatusToIssue({ octokit, owner, repo, issue, status }) {
+  return await octokit.issues.createComment({
+    owner: owner,
+    repo: repo,
+    issue_number: issue.number,
+    body: status
+  });
+}
+
+function __generateMessageBody(messageSuffix, actions) {
+  let message = messageSuffix;
+
+  actions.forEach(action => {
+    message += `* ${action}  \n`;
+  });
+  return message;
+}
+
+function buildStatusFromActions({ actions, errors }) {
+  let status;
+  if (actions) {
+    status = __generateMessageBody(
+      outdent`
+            # Issue processed
+
+            ## The following actions were taken:
+
+        `,
+      actions
+    );
+  }
+
+  if (errors) {
+    status = __generateMessageBody(
+      outdent`
+            # Errors encountered while processing
+
+        `,
+      errors
+    );
+  }
+  return status;
+}
+
 async function run() {
   let octokit;
+  const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+  const { issue } = github.context.payload;
+  let errors = [];
+  let actions = [];
   try {
     octokit = new github.GitHub(process.env.ADMIN_TOKEN);
   } catch (error) {
     core.debug("Error while trying to create github client.");
     core.debug(error.stack);
-    core.setFailed(error.message);
   }
   try {
     core.debug(new Date().toTimeString());
 
-    const { issue } = github.context.payload;
     const parsingRulePath = core.getInput("PARSING_RULES_PATH");
 
-    const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
     const parserRules = await getParserRules({
       octokit,
       owner,
@@ -49,14 +95,31 @@ async function run() {
         email
       });
       core.debug(result);
-      core.info(`User with email ${email} has been invited into the org.`);
+      let actionMessage = `User with email ${email} has been invited into the org.`;
+      core.info(actionMessage);
+      actions.push(actionMessage);
     } else {
       throw "Email not found in issue";
     }
-
     core.info(new Date().toTimeString());
+    writeStatusToIssue({
+      octokit: octokit,
+      owner: owner,
+      repo: repo,
+      issue: issue,
+      status: buildStatusFromActions({ actions: actions })
+    });
   } catch (error) {
     core.debug(error.stack);
+    errors.push(error.message);
+    // write error to issue
+    writeStatusToIssue({
+      octokit: octokit,
+      owner: owner,
+      repo: repo,
+      issue: issue,
+      status: buildStatusFromActions({ errors: errors })
+    });
     core.setFailed(error.message);
   }
 }
