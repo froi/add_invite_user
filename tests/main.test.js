@@ -94,4 +94,17 @@ describe("Main", () => {
     expect(functions.createInvitation).toHaveBeenCalledTimes(0);
     expect(functions.setFailed).toHaveBeenCalledTimes(1);
   });
+
+  it("fails to get a good octokit instance and throws an exception", async () => {
+    const errorMessage = "Test Error";
+    GitHub.mockImplementation(() => {
+      throw Error(errorMessage);
+    });
+    await main.main();
+
+    expect(functions.getContents).toHaveBeenCalledTimes(0);
+    expect(functions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(functions.setFailed).toHaveBeenCalledTimes(1);
+    expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
+  });
 });
