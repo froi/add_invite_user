@@ -25,7 +25,7 @@ let functions = {
   }),
 
   setFailed: jest.fn(msg => {
-    console.log(`MOCK ERROR: ${msg}`);
+    console.error(`MOCK ERROR: ${msg}`);
   })
 };
 
