@@ -104,7 +104,7 @@ describe("Main", () => {
   });
 
   it("fails to get a good octokit instance and throws an exception", async () => {
-    const errorMessage = "Test Error";
+    const errorMessage = "Failed to get a proper GitHub client.";
     GitHub.mockImplementation(() => {
       throw Error(errorMessage);
     });
