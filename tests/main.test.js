@@ -26,6 +26,11 @@ let functions = {
 
   setFailed: jest.fn(msg => {
     console.error(`MOCK ERROR: ${msg}`);
+  }),
+  setOutput: jest.fn((name, value) => {
+    let returnObj = {};
+    returnObj[name] = value;
+    return returnObj;
   })
 };
 
@@ -56,6 +61,7 @@ beforeEach(() => {
     console.log(`MOCK DEBUG: ${message}`);
   };
   core.setFailed = functions.setFailed;
+  core.setOutput = functions.setOutput;
 
   GitHub.mockImplementation(() => github);
 });
@@ -81,9 +87,10 @@ describe("Main", () => {
     await main.main();
     expect(functions.getContents).toHaveBeenCalledTimes(1);
     expect(functions.createInvitation).toHaveBeenCalledTimes(1);
+    expect(functions.setOutput).toHaveBeenCalledTimes(2);
   });
 
-  it("prases the parser rules and throws an exception with an invalid bodh", async () => {
+  it("parses the parser rules and throws an exception with an invalid body", async () => {
     setIssueBody("Any test data without an email");
     core.getInput = jest
       .fn()
@@ -93,6 +100,7 @@ describe("Main", () => {
     expect(functions.getContents).toHaveBeenCalledTimes(1);
     expect(functions.createInvitation).toHaveBeenCalledTimes(0);
     expect(functions.setFailed).toHaveBeenCalledTimes(1);
+    expect(functions.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("fails to get a good octokit instance and throws an exception", async () => {
@@ -106,5 +114,6 @@ describe("Main", () => {
     expect(functions.createInvitation).toHaveBeenCalledTimes(0);
     expect(functions.setFailed).toHaveBeenCalledTimes(1);
     expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(functions.setOutput).toHaveBeenCalledTimes(2);
   });
 });
