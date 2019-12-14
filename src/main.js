@@ -12,8 +12,8 @@ async function getParserRules({ octokit, owner, repo, path }) {
 function handleError(error) {
   core.debug(error.message);
   core.debug(error.stack);
-  core.setOutput('message', error.message);
-  core.setOutput('stepStatus', 'failed');
+  core.setOutput("message", error.message);
+  core.setOutput("stepStatus", "failed");
   core.setFailed(error.message);
 }
 
@@ -54,10 +54,11 @@ async function main() {
         role,
         email
       });
+      const successMessage = `User with email ${email} has been invited into the org.`;
       core.debug(result);
-      core.info(`User with email ${email} has been invited into the org.`);
-      core.setOutput('message', successMessage);
-      core.setOutput('stepStatus', 'success');
+      core.info(successMessage);
+      core.setOutput("message", successMessage);
+      core.setOutput("stepStatus", "success");
     } else {
       throw new Error("Email not found in issue");
     }
