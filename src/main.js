@@ -16,16 +16,19 @@ function handleError(error) {
   core.setOutput("stepStatus", "failed");
   core.setFailed(error.message);
 }
-
-async function main() {
+function getOctokit() {
   let octokit;
   try {
     octokit = new github.GitHub(process.env.ADMIN_TOKEN);
+    return octokit;
   } catch (error) {
-    handleError(error);
+    throw new Error("Failed to get a proper GitHub client.");
   }
+}
+async function main() {
   try {
     core.debug(new Date().toTimeString());
+    const octokit = getOctokit();
 
     const { issue } = github.context.payload;
     const parsingRulePath = core.getInput("PARSING_RULES_PATH");
