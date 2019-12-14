@@ -10,7 +10,7 @@ async function getParserRules({ octokit, owner, repo, path }) {
 }
 
 function handleError(error) {
-  core.debug("Error while trying to create github client.");
+  core.debug(error.message);
   core.debug(error.stack);
   core.setOutput('message', error.message);
   core.setOutput('stepStatus', 'failed');
