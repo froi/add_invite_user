@@ -17,6 +17,13 @@ For more information on these inputs, see the [API Documentation](https://develo
 - `PARSING_RULES_PATH`: The path to the GitHub Issue parsing rules. For more info on the contents of this file please see the [Parsing Rules](#parsing-rules) section below.
 - `USER_ROLE`: The default role to apply to the user being invited to the organization. We recommend using `direct_member`. Please use caution when changing this value, you could give users too much privileges to your organization.
 
+### Outputs
+
+This action has two output variables to help you create composable workflows.
+
+- message: This outputs a success or failure message. This will help you use another action to post messages to an issue. See example [Actions workflow](#example-workflow---add-new-user-to-org-with-outputs) below.
+- stepStatus: This outputs the status of this step. There are two possible values `success` and `failed`. With this status you can now configure your workflow file to not end the job on an error. See example [Actions workflow](#example-workflow---add-new-user-to-org-with-outputs) below.
+
 ### Environment Variables
 
 - `ADMIN_TOKEN`: Personal Access Token (PAT) of a member of the organization that has owner privileges.
@@ -87,6 +94,37 @@ jobs:
 ```
 
 This will workflow will create a new organization invitation for the user information found in the issue body.
+
+### Example workflow - add new user to org with outputs
+
+```yaml
+name: Add User from Issues
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  create-invite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Get issue data
+        id: get-issue-data
+        uses: froi/add_invite_user@release/v1
+        with:
+          PARSING_RULES_PATH: ".github/parsing_rules.json"
+          USER_ROLE: "direct_member"
+        env:
+          ADMIN_TOKEN: ${{secrets.ADMIN_TOKEN}}
+      - name: Comment on Issue
+        uses: froi/add-comment-action@v1
+        with:
+          message: {{ steps.get-issue-data.message }}
+          status: {{ steps.get-issue-data.stepStatus }}
+```
+
+This will workflow will create a new organization invitation for the user information found in the issue body and will post a success or failure message as an issue comment.
 
 ### Example Parsing Rules file
 

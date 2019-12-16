@@ -9,18 +9,26 @@ async function getParserRules({ octokit, owner, repo, path }) {
   return JSON.parse(content);
 }
 
-async function main() {
+function handleError(error) {
+  core.debug(error.message);
+  core.debug(error.stack);
+  core.setOutput("message", error.message);
+  core.setOutput("stepStatus", "failed");
+  core.setFailed(error.message);
+}
+function getOctokit() {
   let octokit;
   try {
     octokit = new github.GitHub(process.env.ADMIN_TOKEN);
+    return octokit;
   } catch (error) {
-    core.debug("Error while trying to create github client.");
-    core.debug(error.stack);
-    core.setFailed(error.message);
-    return;
+    throw new Error("Failed to get a proper GitHub client.");
   }
+}
+async function main() {
   try {
     core.debug(new Date().toTimeString());
+    const octokit = getOctokit();
 
     const { issue } = github.context.payload;
     const parsingRulePath = core.getInput("PARSING_RULES_PATH");
@@ -37,7 +45,7 @@ async function main() {
 
     core.debug(issue.body);
     if (!emailMatch) {
-      throw Error("Parsing error: email not found.");
+      throw new Error("Parsing error: email not found.");
     }
 
     const email = emailMatch.groups.email;
@@ -49,16 +57,18 @@ async function main() {
         role,
         email
       });
+      const successMessage = `User with email ${email} has been invited into the org.`;
       core.debug(result);
-      core.info(`User with email ${email} has been invited into the org.`);
+      core.info(successMessage);
+      core.setOutput("message", successMessage);
+      core.setOutput("stepStatus", "success");
     } else {
-      throw "Email not found in issue";
+      throw new Error("Email not found in issue");
     }
 
     core.info(new Date().toTimeString());
   } catch (error) {
-    core.debug(error.stack);
-    core.setFailed(error.message);
+    handleError(error);
   }
 }
 
