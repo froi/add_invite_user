@@ -7,7 +7,12 @@ const { GitHub, context } = require("@actions/github");
 const core = require("@actions/core");
 
 const OLD_ENV = process.env;
-const parsingRules = {
+
+const emailRule = {
+  regex: ".*@gmail.com$"
+};
+
+const parserRules = {
   username: {
     regex: "<p>Name of Requester:\\s*(?<username>.+?)<\\/p>"
   },
@@ -16,11 +21,16 @@ const parsingRules = {
   }
 };
 
+const configFile = {
+  emailRule: emailRule,
+  parserRules: parserRules
+};
+
 let functions = {
   createInvitation: jest.fn().mockReturnValue(true),
   getContents: jest.fn().mockReturnValue({
     data: {
-      content: Buffer.from(JSON.stringify(parsingRules)).toString("base64")
+      content: Buffer.from(JSON.stringify(configFile)).toString("base64")
     }
   }),
 
@@ -55,7 +65,7 @@ beforeEach(() => {
     repo: "repo"
   };
 
-  setIssueBody("<p>Email of Requester: user@email.com</p>");
+  setIssueBody("<p>Email of Requester: user@gmail.com</p>");
 
   core.debug = message => {
     console.log(`MOCK DEBUG: ${message}`);
@@ -103,6 +113,23 @@ describe("Main", () => {
     expect(functions.setOutput).toHaveBeenCalledTimes(2);
   });
 
+  it("parses the config and throws an exception due to an invalid email", async () => {
+    const email = "user@email.com";
+    setIssueBody(`<p>Email of Requester: ${email}</p>`);
+    const errorMessage = `Email ${email} not from a valid domain`;
+
+    core.getInput = jest
+      .fn()
+      .mockReturnValueOnce("/path")
+      .mockReturnValueOnce("direct_member");
+    await main.main();
+    expect(functions.getContents).toHaveBeenCalledTimes(1);
+    expect(functions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(functions.setFailed).toHaveBeenCalledTimes(1);
+    expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(functions.setOutput).toHaveBeenCalledTimes(2);
+  });
+
   it("fails to get a good octokit instance and throws an exception", async () => {
     const errorMessage = "Failed to get a proper GitHub client.";
     GitHub.mockImplementation(() => {
@@ -115,5 +142,48 @@ describe("Main", () => {
     expect(functions.setFailed).toHaveBeenCalledTimes(1);
     expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
     expect(functions.setOutput).toHaveBeenCalledTimes(2);
+  });
+
+  it("validateConfig returns true with a valid configFile", () => {
+    expect(main.validateConfig({ config: configFile })).toEqual(true);
+  });
+
+  it("validateConfig throws an error with a missing emailRule", () => {
+    const invalidFile = {
+      parsergRules: parserRules
+    };
+
+    // toThrow expects a function, so wrapping in an anonymous function
+    expect(() => {
+      main.validateConfig({ config: invalidFile });
+    }).toThrowError("Config lacks valid email rule");
+  });
+
+  it("validateConfig throws an error with a missing parsingRule", () => {
+    const invalidFile = {
+      emailRule: emailRule
+    };
+
+    expect(() => {
+      main.validateConfig({ config: invalidFile });
+    }).toThrowError("Config lacks valid parser rules");
+  });
+
+  it("validateEmail returns true with a valid email", () => {
+    expect(
+      main.validateEmail({
+        email: "user@email.com",
+        emailRegex: ".*@email.com$"
+      })
+    ).toEqual(true);
+  });
+
+  it("validateEmail returns false with a valid email", () => {
+    expect(
+      main.validateEmail({
+        email: "user@gmail.com",
+        emailRegex: ".*@email.com$"
+      })
+    ).toEqual(false);
   });
 });
