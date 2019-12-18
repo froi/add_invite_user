@@ -26,13 +26,21 @@ const configFile = {
   parserRules: parserRules
 };
 
+let buildContents = config => {
+  return {
+    data: {
+      content: Buffer.from(JSON.stringify(config)).toString("base64")
+    }
+  };
+};
+
+let updateConfigFile = config => {
+  functions.getContents.mockReturnValue(buildContents(config));
+};
+
 let functions = {
   createInvitation: jest.fn().mockReturnValue(true),
-  getContents: jest.fn().mockReturnValue({
-    data: {
-      content: Buffer.from(JSON.stringify(configFile)).toString("base64")
-    }
-  }),
+  getContents: jest.fn().mockReturnValue(buildContents(configFile)),
 
   setFailed: jest.fn(msg => {
     console.error(`MOCK ERROR: ${msg}`);
@@ -41,6 +49,9 @@ let functions = {
     let returnObj = {};
     returnObj[name] = value;
     return returnObj;
+  }),
+  debug: jest.fn(message => {
+    console.log(`MOCK DEBUG: ${message}`);
   })
 };
 
@@ -67,9 +78,7 @@ beforeEach(() => {
 
   setIssueBody("<p>Email of Requester: user@gmail.com</p>");
 
-  core.debug = message => {
-    console.log(`MOCK DEBUG: ${message}`);
-  };
+  core.debug = functions.debug;
   core.setFailed = functions.setFailed;
   core.setOutput = functions.setOutput;
 
@@ -80,12 +89,24 @@ afterEach(() => {
   process.env = OLD_ENV;
 });
 
+let ensureDefaultPayload = () => {
+  if (!context.payload || !context.payload.issue) {
+    context.payload = {
+      issue: {
+        body: "",
+        user: {}
+      }
+    };
+  }
+};
 let setIssueBody = body => {
-  context.payload = {
-    issue: {
-      body: body
-    }
-  };
+  ensureDefaultPayload();
+  context.payload.issue.body = body;
+};
+
+let setIssueUser = user => {
+  ensureDefaultPayload();
+  context.payload.issue.user = user;
 };
 
 describe("Main", () => {
@@ -122,6 +143,31 @@ describe("Main", () => {
       .fn()
       .mockReturnValueOnce("/path")
       .mockReturnValueOnce("direct_member");
+    await main.main();
+    expect(functions.getContents).toHaveBeenCalledTimes(1);
+    expect(functions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(functions.setFailed).toHaveBeenCalledTimes(1);
+    expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(functions.setOutput).toHaveBeenCalledTimes(2);
+  });
+
+  it("parses the config and throws an exception due to an invalid user that created the issue", async () => {
+    const createdUser = "IAmAnInvalidUser";
+    const errorMessage = `User that opened issue, ${createdUser} not a trusted user`;
+    let oldConfigFile = configFile;
+    oldConfigFile.userCreatedRule = {
+      regex: "ValidUser"
+    };
+    updateConfigFile(oldConfigFile);
+
+    setIssueUser({
+      login: createdUser
+    });
+    core.getInput = jest
+      .fn()
+      .mockReturnValueOnce("/path")
+      .mockReturnValueOnce("direct_member");
+
     await main.main();
     expect(functions.getContents).toHaveBeenCalledTimes(1);
     expect(functions.createInvitation).toHaveBeenCalledTimes(0);

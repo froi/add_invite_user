@@ -41,16 +41,21 @@ A JSON file with the rules you need to define to parse the GitHub Issue body and
 
 #### Structure
 
-The action expects the use of regular expressions with named capture groups. There are two base named capture groups that the Action expects:
+The action expects the use of regular expressions with named capture groups. There are two base named capture groups that the Action expects with one additional optional group:
 
-- **username**
-- **email**
+- **emailRule**
+- **parsingRules**
+- **userCreatedRule**
+  - Optional, validation will be ignored if this is not included
 
 ```JSON
 {
   "emailRule": {
     "regex": "your-regular-expression"
   },
+  "userCreatedRule": {
+  "regex": "your-regular-expression"
+  }
   "parsingRules": {
     "username": {
       "regex": "your-regular-expression (?<username>.+?)"
@@ -137,6 +142,9 @@ This will workflow will create a new organization invitation for the user inform
 {
   "emailRule": {
     "regex": ".*email@domain.com$"
+  },
+  "userCreatedRule": {
+  "regex": "UserName"
   },
   "parsingRules": {
     "username": {
