@@ -1,10 +1,5 @@
-jest.mock("@actions/core");
-jest.mock("@actions/github");
-
+const { GitHub, context, core, functions, utils } = require("./utils");
 const main = require("../src/main");
-
-const { GitHub, context } = require("@actions/github");
-const core = require("@actions/core");
 
 const OLD_ENV = process.env;
 
@@ -38,51 +33,23 @@ let updateConfigFile = config => {
   functions.getContents.mockReturnValue(buildContents(config));
 };
 
-let functions = {
-  createInvitation: jest.fn().mockReturnValue(true),
-  getContents: jest.fn().mockReturnValue(buildContents(configFile)),
-
-  setFailed: jest.fn(msg => {
-    console.error(`MOCK ERROR: ${msg}`);
-  }),
-  setOutput: jest.fn((name, value) => {
-    let returnObj = {};
-    returnObj[name] = value;
-    return returnObj;
-  }),
-  debug: jest.fn(message => {
-    console.log(`MOCK DEBUG: ${message}`);
-  })
-};
+functions.createInvitation.mockReturnValue(true);
+functions.getContents.mockReturnValue(buildContents(configFile));
+functions.setFailed.mockImplementation(msg => {
+  console.error(`MOCK ERROR: ${msg}`);
+});
+functions.setOutput.mockImplementation((name, value) => {
+  let returnObj = {};
+  returnObj[name] = value;
+  return returnObj;
+});
+functions.debug.mockImplementation(message => {
+  console.log(`MOCK DEBUG: ${message}`);
+});
 
 beforeEach(() => {
-  jest.resetModules();
-  Object.entries(functions).forEach(fn => {
-    fn[1].mockClear();
-  });
-  process.env.GITHUB_REPOSITORY = "testOwner/testRepo";
-
-  const github = {
-    repos: {
-      getContents: functions.getContents
-    },
-    orgs: {
-      createInvitation: functions.createInvitation
-    }
-  };
-
-  context.repo = {
-    owner: "owner",
-    repo: "repo"
-  };
-
+  utils.resetMocks();
   setIssueBody("<p>Email of Requester: user@gmail.com</p>");
-
-  core.debug = functions.debug;
-  core.setFailed = functions.setFailed;
-  core.setOutput = functions.setOutput;
-
-  GitHub.mockImplementation(() => github);
 });
 
 afterEach(() => {
@@ -115,6 +82,7 @@ describe("Main", () => {
       .fn()
       .mockReturnValueOnce("/path")
       .mockReturnValueOnce("direct_member");
+
     await main.main();
     expect(functions.getContents).toHaveBeenCalledTimes(1);
     expect(functions.createInvitation).toHaveBeenCalledTimes(1);
