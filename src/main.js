@@ -67,7 +67,7 @@ async function main() {
 
     if (
       userCreatedRule &&
-      !validateCreatedUser({ issue, createdUserRegex: userCreatedRule.regex })
+      !isTrustedUser({ issue, trustedUserRegex: trustedUserRule.regex })
     ) {
       throw new Error(
         `User that opened issue, ${issue.user.login} not a trusted user`
