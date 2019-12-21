@@ -45,7 +45,7 @@ function validateEmail({ email, emailRegex }) {
   return new RegExp(emailRegex).test(email);
 }
 
-function validateCreatedUser({ issue, createdUserRegex }) {
+function isTrustedUser({ issue, trustedUserRegex }) {
   return new RegExp(createdUserRegex).test(issue.user.login);
 }
 
