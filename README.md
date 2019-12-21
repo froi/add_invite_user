@@ -50,7 +50,7 @@ The action expects the use of regular expressions with named capture groups. The
 
 ```JSON
 {
-  "emailRule": {
+  "emailDomainRule": {
     "regex": "your-regular-expression"
   },
   "userCreatedRule": {
