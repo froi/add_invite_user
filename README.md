@@ -130,7 +130,7 @@ jobs:
       - name: Comment on Issue
         uses: froi/add-comment-action@v1
         with:
-          message: { { steps.get-issue-data.message } }
+          message: {{ steps.get-issue-data.message }}
           status: { { steps.get-issue-data.stepStatus } }
 ```
 
