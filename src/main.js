@@ -46,7 +46,7 @@ function validateEmail({ email, emailRegex }) {
 }
 
 function isTrustedUser({ issue, trustedUserRegex }) {
-  return new RegExp(createdUserRegex).test(issue.user.login);
+  return new RegExp(trustedUserRegex).test(issue.user.login);
 }
 
 async function main() {
@@ -58,7 +58,7 @@ async function main() {
     const configPath = core.getInput("CONFIG_PATH");
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
-    const { emailRule, parserRules, userCreatedRule } = await getConfig({
+    const { emailRule, parserRules, trustedUserRule } = await getConfig({
       octokit,
       owner,
       repo,
@@ -66,7 +66,7 @@ async function main() {
     });
 
     if (
-      userCreatedRule &&
+      trustedUserRule &&
       !isTrustedUser({ issue, trustedUserRegex: trustedUserRule.regex })
     ) {
       throw new Error(

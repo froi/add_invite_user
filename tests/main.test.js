@@ -155,7 +155,7 @@ describe("Main", () => {
     const createdUser = "IAmAnInvalidUser";
     const errorMessage = `User that opened issue, ${createdUser} not a trusted user`;
     let oldConfigFile = configFile;
-    oldConfigFile.userCreatedRule = {
+    oldConfigFile.trustedUserRule = {
       regex: "ValidUser"
     };
     updateConfigFile(oldConfigFile);
