@@ -45,7 +45,7 @@ The action expects the use of regular expressions with named capture groups. The
 
 - **emailRule**
 - **parsingRules**
-- **userCreatedRule**
+- **trustedUserRule**
   - Optional, validation will be ignored if this is not included
 
 ```JSON
