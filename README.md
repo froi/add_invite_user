@@ -53,7 +53,7 @@ The action expects the use of regular expressions with named capture groups. The
   "emailDomainRule": {
     "regex": "your-regular-expression"
   },
-  "userCreatedRule": {
+  "trustedUserRule": {
   "regex": "your-regular-expression"
   }
   "parsingRules": {
