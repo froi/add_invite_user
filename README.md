@@ -143,7 +143,7 @@ This will workflow will create a new organization invitation for the user inform
   "emailRule": {
     "regex": ".*email@domain.com$"
   },
-  "userCreatedRule": {
+  "trustedUserRule": {
   "regex": "UserName"
   },
   "parsingRules": {
