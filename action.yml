@@ -5,6 +5,11 @@ inputs:
     description: 'path to the prasing rules'
     required: true
     default: '.github/parsing_rules.json'
+outputs:
+  message:
+    description: 'Message output. Can be of actions taken or an error message.'
+  stepStatus:
+    description: 'The status of the current step. Values should be `success` or `failed`.'
 runs:
   using: 'node12'
   main: 'dist/index.js'
