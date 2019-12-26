@@ -49,6 +49,16 @@ beforeEach(() => {
 
 afterEach(() => {});
 
+let ensureDefaultPayload = () => {
+  if (!context.payload || !context.payload.issue) {
+    context.payload = {
+      issue: {
+        body: "",
+        user: {}
+      }
+    };
+  }
+};
 let setIssueBody = body => {
   const context = octomock.getContext();
   context.payload.issue.body = body;
@@ -95,7 +105,45 @@ describe("Main", () => {
     const createdUser = "IAmAnInvalidUser";
     const errorMessage = `User that opened issue, ${createdUser} not a trusted user`;
     let oldConfigFile = configFile;
-    oldConfigFile.userCreatedRule = {
+    oldConfigFile.trustedUserRule = {
+      regex: "ValidUser"
+    };
+    updateConfigFile(oldConfigFile);
+
+    setIssueUser({
+      login: createdUser
+    });
+
+    await main.main();
+    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+    
+    setIssueUser({
+        login: "ValidUser" 
+    });
+  });
+
+  it("parses the config and throws an exception due to an invalid email", async () => {
+    const email = "user@email.com";
+    setIssueBody(`<p>Email of Requester: ${email}</p>`);
+    const errorMessage = `Email ${email} not from a valid domain`;
+
+    await main.main();
+    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+  });
+
+  it("parses the config and throws an exception due to an invalid user that created the issue", async () => {
+    const createdUser = "IAmAnInvalidUser";
+    const errorMessage = `User that opened issue, ${createdUser} not a trusted user`;
+    let oldConfigFile = configFile;
+    oldConfigFile.trustedUserRule = {
       regex: "ValidUser"
     };
     updateConfigFile(oldConfigFile);
@@ -136,6 +184,49 @@ describe("Main", () => {
   it("validateConfig throws an error with a missing emailRule", () => {
     const invalidFile = {
       parserRules: parserRules
+    };
+
+    // toThrow expects a function, so wrapping in an anonymous function
+    expect(() => {
+      main.validateConfig({ config: invalidFile });
+    }).toThrowError("Config lacks valid email rule");
+  });
+
+  it("validateConfig throws an error with a missing parsingRule", () => {
+    const invalidFile = {
+      emailRule: emailRule
+    };
+
+    expect(() => {
+      main.validateConfig({ config: invalidFile });
+    }).toThrowError("Config lacks valid parser rules");
+  });
+
+  it("validateEmail returns true with a valid email", () => {
+    expect(
+      main.validateEmail({
+        email: "user@email.com",
+        emailRegex: ".*@email.com$"
+      })
+    ).toEqual(true);
+  });
+
+  it("validateEmail returns false with a valid email", () => {
+    expect(
+      main.validateEmail({
+        email: "user@gmail.com",
+        emailRegex: ".*@email.com$"
+      })
+    ).toEqual(false);
+  });
+
+  it("validateConfig returns true with a valid configFile", () => {
+    expect(main.validateConfig({ config: configFile })).toEqual(true);
+  });
+
+  it("validateConfig throws an error with a missing emailRule", () => {
+    const invalidFile = {
+      parsergRules: parserRules
     };
 
     // toThrow expects a function, so wrapping in an anonymous function

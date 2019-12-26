@@ -46,20 +46,20 @@ function validateEmail({ email, emailRegex }) {
   return new RegExp(emailRegex).test(email);
 }
 
-function validateCreatedUser({ issue, createdUserRegex }) {
-  return new RegExp(createdUserRegex).test(issue.user.login);
+function isTrustedUser({ issue, trustedUserRegex }) {
+  return new RegExp(trustedUserRegex).test(issue.user.login);
 }
 
 async function main() {
   try {
     core.debug(new Date().toTimeString());
     const octokit = getOctokit();
-
+    
     const { issue } = github.context.payload;
     const configPath = core.getInput("CONFIG_PATH");
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
-    const { emailRule, parserRules, userCreatedRule } = await getConfig({
+    const { emailRule, parserRules, trustedUserRule } = await getConfig({
       octokit,
       owner,
       repo,
@@ -67,8 +67,8 @@ async function main() {
     });
 
     if (
-      userCreatedRule &&
-      !validateCreatedUser({ issue, createdUserRegex: userCreatedRule.regex })
+      trustedUserRule &&
+      !isTrustedUser({ issue, trustedUserRegex: trustedUserRule.regex })
     ) {
       throw new Error(
         `User that opened issue, ${issue.user.login} not a trusted user`

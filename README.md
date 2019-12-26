@@ -45,15 +45,15 @@ The action expects the use of regular expressions with named capture groups. The
 
 - **emailRule**
 - **parsingRules**
-- **userCreatedRule**
+- **trustedUserRule**
   - Optional, validation will be ignored if this is not included
 
 ```JSON
 {
-  "emailRule": {
+  "emailDomainRule": {
     "regex": "your-regular-expression"
   },
-  "userCreatedRule": {
+  "trustedUserRule": {
   "regex": "your-regular-expression"
   }
   "parsingRules": {
@@ -143,8 +143,8 @@ This will workflow will create a new organization invitation for the user inform
   "emailRule": {
     "regex": ".*email@domain.com$"
   },
-  "userCreatedRule": {
-  "regex": "UserName"
+  "trustedUserRule": {
+    "regex": "UserName"
   },
   "parsingRules": {
     "username": {
