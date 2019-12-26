@@ -14,8 +14,15 @@ Create a workflow `.yml` file in your repositories `.github/workflows` directory
 
 For more information on these inputs, see the [API Documentation](https://developer.github.com/v3/repos/releases/#input-2)
 
-- `PARSING_RULES_PATH`: The path to the GitHub Issue parsing rules. For more info on the contents of this file please see the [Parsing Rules](#parsing-rules) section below.
+- `CONFIG_PATH`: The path to the GitHub Issue config rules. For more info on the contents of this file please see the [Config Rules](#config-rules) section below.
 - `USER_ROLE`: The default role to apply to the user being invited to the organization. We recommend using `direct_member`. Please use caution when changing this value, you could give users too much privileges to your organization.
+
+### Outputs
+
+This action has two output variables to help you create composable workflows.
+
+- message: This outputs a success or failure message. This will help you use another action to post messages to an issue. See example [Actions workflow](#example-workflow---add-new-user-to-org-with-outputs) below.
+- stepStatus: This outputs the status of this step. There are two possible values `success` and `failed`. With this status you can now configure your workflow file to not end the job on an error. See example [Actions workflow](#example-workflow---add-new-user-to-org-with-outputs) below.
 
 ### Environment Variables
 
@@ -28,29 +35,39 @@ The GitHub Actions context has access to a `GITHUB_TOKEN` environment variables 
 - To learn more on token scopes [click here](https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/#available-scopes).
 - To learn how to create your own personal access token [click here](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
 
-### Parsing Rules
+### Config Rules
 
-A JSON file with the rules you need to define to parse the GitHub Issue body and extract the data needed to create an invitation to your GitHub organization.
+A JSON file with the rules you need to define to parse the GitHub Issue body and extract the data needed to create an invitation to your GitHub organization as well as the valid domain from which you will accept emails.
 
 #### Structure
 
-The action expects the use of regular expressions with named capture groups. There are two base named capture groups that the Action expects:
+The action expects the use of regular expressions with named capture groups. There are two base named capture groups that the Action expects with one additional optional group:
 
-- **username**
-- **email**
+- **emailRule**
+- **parsingRules**
+- **trustedUserRule**
+  - Optional, validation will be ignored if this is not included
 
 ```JSON
 {
-  "username": {
-    "regex": "your-regular-expression (?<username>.+?)"
+  "emailDomainRule": {
+    "regex": "your-regular-expression"
   },
-  "email": {
-    "regex": "your-regular-expression (?<email>.+?)"
+  "trustedUserRule": {
+  "regex": "your-regular-expression"
+  }
+  "parsingRules": {
+    "username": {
+      "regex": "your-regular-expression (?<username>.+?)"
+    },
+    "email": {
+      "regex": "your-regular-expression (?<email>.+?)"
+    }
   }
 }
 ```
 
-Want a better example? [Click here](#example-parsing-rules-file)
+Want a better example? [Click here](#example-config-file)
 
 #### More info on regular expressions
 
@@ -88,15 +105,54 @@ jobs:
 
 This will workflow will create a new organization invitation for the user information found in the issue body.
 
-### Example Parsing Rules file
+### Example workflow - add new user to org with outputs
+
+```yaml
+name: Add User from Issues
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  create-invite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Get issue data
+        id: get-issue-data
+        uses: froi/add_invite_user@release/v1
+        with:
+          PARSING_RULES_PATH: ".github/parsing_rules.json"
+          USER_ROLE: "direct_member"
+        env:
+          ADMIN_TOKEN: ${{secrets.ADMIN_TOKEN}}
+      - name: Comment on Issue
+        uses: froi/add-comment-action@v1
+        with:
+          message: {{ steps.get-issue-data.message }}
+          status: {{ steps.get-issue-data.stepStatus }}
+```
+
+This will workflow will create a new organization invitation for the user information found in the issue body and will post a success or failure message as an issue comment.
+
+### Example Config file
 
 ```JSON
 {
-  "username": {
-    "regex": "<p>Name of Requester:\\s*(?<username>.+?)<\\/p>"
+  "emailRule": {
+    "regex": ".*email@domain.com$"
   },
-  "email": {
-    "regex": "<p>Email of Requester:\\s*(?<email>.+?)<\\/p>"
+  "trustedUserRule": {
+  "regex": "UserName"
+  },
+  "parsingRules": {
+    "username": {
+      "regex": "<p>Name of Requester:\\s*(?<username>.+?)<\\/p>"
+    },
+    "email": {
+      "regex": "<p>Email of Requester:\\s*(?<email>.+?)<\\/p>"
+    }
   }
 }
 ```
