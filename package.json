@@ -31,8 +31,8 @@
   },
   "homepage": "https://github.com/froi/add_invite_user#readme",
   "dependencies": {
-    "@actions/core": "^1.1.1",
-    "@actions/github": "^1.1.0"
+    "@actions/core": "^1.2.0",
+    "@actions/github": "^2.0.0"
   },
   "devDependencies": {
     "@zeit/ncc": "^0.20.5",
@@ -41,6 +41,7 @@
     "husky": "^3.1.0",
     "jest": "^24.9.0",
     "lint-staged": "^9.5.0",
+    "octomock": "git+https://github.com/Chocrates/octomock.git",
     "prettier": "1.19.1"
   },
   "husky": {
@@ -57,5 +58,12 @@
       "eslint --fix",
       "git add"
     ]
+  },
+  "jest": {
+    "automock": false,
+    "setupFilesAfterEnv": [
+      "./setupJest.js"
+    ],
+    "testEnvironment": "node"
   }
 }
