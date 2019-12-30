@@ -3,7 +3,8 @@ const github = require("@actions/github");
 
 async function getConfig({ octokit, owner, repo, path }) {
   const result = await octokit.repos.getContents({ owner, repo, path });
-  core.debug("in getParserRules");
+    core.debug("in getParserRules");
+    core.debug(result)
   const content = Buffer.from(result.data.content, "base64").toString("ascii");
   core.debug(JSON.stringify(content));
   const config = JSON.parse(content);
