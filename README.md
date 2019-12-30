@@ -16,6 +16,7 @@ For more information on these inputs, see the [API Documentation](https://develo
 
 - `CONFIG_PATH`: The path to the GitHub Issue config rules. For more info on the contents of this file please see the [Config Rules](#config-rules) section below.
 - `USER_ROLE`: The default role to apply to the user being invited to the organization. We recommend using `direct_member`. Please use caution when changing this value, you could give users too much privileges to your organization.
+- `EMAIL`: The email of the user that you are adding to the organization. This can be obtained programatically with the [Actions-Parse-Issue](https://github.com/jasonmacgowan/actions-parse-issue) action
 
 ### Outputs
 
@@ -44,7 +45,6 @@ A JSON file with the rules you need to define to parse the GitHub Issue body and
 The action expects the use of regular expressions with named capture groups. There are two base named capture groups that the Action expects with one additional optional group:
 
 - **emailRule**
-- **parsingRules**
 - **trustedUserRule**
   - Optional, validation will be ignored if this is not included
 
@@ -54,15 +54,7 @@ The action expects the use of regular expressions with named capture groups. The
     "regex": "your-regular-expression"
   },
   "trustedUserRule": {
-  "regex": "your-regular-expression"
-  }
-  "parsingRules": {
-    "username": {
-      "regex": "your-regular-expression (?<username>.+?)"
-    },
-    "email": {
-      "regex": "your-regular-expression (?<email>.+?)"
-    }
+    "regex": "your-regular-expression"
   }
 }
 ```
@@ -99,6 +91,7 @@ jobs:
         with:
           PARSING_RULES_PATH: ".github/parsing_rules.json"
           USER_ROLE: "direct_member"
+          EMAIL: ${{ steps.get_input.outputs.email }}
         env:
           ADMIN_TOKEN: ${{secrets.ADMIN_TOKEN}}
 ```
@@ -119,19 +112,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Get issue data
+      - name: Get User Input
+        id: get_input
+        uses: jasonmacgowan/actions-parse-issue@master
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMTIN_TOKEN }}
+      - name: Invite User
         id: get-issue-data
         uses: froi/add_invite_user@release/v1
         with:
           PARSING_RULES_PATH: ".github/parsing_rules.json"
           USER_ROLE: "direct_member"
+          EMAIL: ${{ steps.get_input.outputs.['Email of Requester']}}
         env:
           ADMIN_TOKEN: ${{secrets.ADMIN_TOKEN}}
       - name: Comment on Issue
         uses: froi/add-comment-action@v1
         with:
-          message: {{ steps.get-issue-data.message }}
-          status: {{ steps.get-issue-data.stepStatus }}
+          message: { { steps.get-issue-data.message } }
+          status: { { steps.get-issue-data.stepStatus } }
 ```
 
 This will workflow will create a new organization invitation for the user information found in the issue body and will post a success or failure message as an issue comment.
@@ -145,14 +144,6 @@ This will workflow will create a new organization invitation for the user inform
   },
   "trustedUserRule": {
   "regex": "UserName"
-  },
-  "parsingRules": {
-    "username": {
-      "regex": "<p>Name of Requester:\\s*(?<username>.+?)<\\/p>"
-    },
-    "email": {
-      "regex": "<p>Email of Requester:\\s*(?<email>.+?)<\\/p>"
-    }
   }
 }
 ```
