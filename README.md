@@ -114,23 +114,23 @@ jobs:
       - uses: actions/checkout@v1
       - name: Get User Input
         id: get_input
-        uses: jasonmacgowan/actions-parse-issue@master
+        uses: jasonmacgowan/parse-issue@master
+        with:
+          extract_email: '<p>Email of Requester:\s*(.*)</p>'
         env:
           ADMIN_TOKEN: ${{ secrets.ADMTIN_TOKEN }}
       - name: Invite User
         id: get-issue-data
         uses: froi/add_invite_user@release/v1
         with:
-          PARSING_RULES_PATH: ".github/parsing_rules.json"
+          CONFIG_PATH: ".github/parsing_rules.json"
           USER_ROLE: "direct_member"
-          EMAIL: ${{ steps.get_input.outputs.['Email of Requester']}}
-        env:
-          ADMIN_TOKEN: ${{secrets.ADMIN_TOKEN}}
+          EMAIL: ${{ steps.get_input.outputs.['email']}}
       - name: Comment on Issue
         uses: froi/add-comment-action@v1
         with:
-          message: { { steps.get-issue-data.message } }
-          status: { { steps.get-issue-data.stepStatus } }
+          message: ${{ steps.get-issue-data.message }}
+          status: ${{ steps.get-issue-data.stepStatus }}
 ```
 
 This will workflow will create a new organization invitation for the user information found in the issue body and will post a success or failure message as an issue comment.
