@@ -127,13 +127,8 @@ jobs:
       - name: Comment on Issue
         uses: froi/add-comment-action@v1
         with:
-<<<<<<< HEAD
-          message: { { steps.get-issue-data.message } }
-          status: { { steps.get-issue-data.stepStatus } }
-=======
           message: ${{ steps.get-issue-data.message }}
           status: ${{ steps.get-issue-data.stepStatus }}
->>>>>>> master
 ```
 
 This will workflow will create a new organization invitation for the user information found in the issue body and will post a success or failure message as an issue comment.
