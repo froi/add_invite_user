@@ -1,12 +1,5 @@
-jest.mock("@actions/core");
-jest.mock("@actions/github");
-
+/* global octomock */
 const main = require("../src/main");
-
-const { GitHub, context } = require("@actions/github");
-const core = require("@actions/core");
-
-const OLD_ENV = process.env;
 
 const emailRule = {
   regex: ".*@gmail.com$"
@@ -15,7 +8,6 @@ const emailRule = {
 const configFile = {
   emailRule: emailRule
 };
-
 let buildContents = config => {
   return {
     data: {
@@ -24,122 +16,82 @@ let buildContents = config => {
   };
 };
 
+octomock.mockFunctions.getContents.mockReturnValue(buildContents(configFile));
+octomock.mockFunctions.setOutput.mockImplementation((name, value) => {
+  return { [name]: value };
+});
+
 let updateConfigFile = config => {
-  functions.getContents.mockReturnValue(buildContents(config));
-};
-
-let functions = {
-  createInvitation: jest.fn().mockReturnValue(true),
-  getContents: jest.fn().mockReturnValue(buildContents(configFile)),
-
-  setFailed: jest.fn(msg => {
-    console.error(`MOCK ERROR: ${msg}`);
-  }),
-  setOutput: jest.fn((name, value) => {
-    let returnObj = {};
-    returnObj[name] = value;
-    return returnObj;
-  }),
-  debug: jest.fn(message => {
-    console.log(`MOCK DEBUG: ${message}`);
-  })
+  octomock.mockFunctions.getContents.mockReturnValue(buildContents(config));
 };
 
 beforeEach(() => {
-  jest.resetModules();
-  Object.entries(functions).forEach(fn => {
-    fn[1].mockClear();
-  });
-  process.env.GITHUB_REPOSITORY = "testOwner/testRepo";
-
-  const github = {
-    repos: {
-      getContents: functions.getContents
-    },
-    orgs: {
-      createInvitation: functions.createInvitation
-    }
-  };
-
-  context.repo = {
-    owner: "owner",
-    repo: "repo"
-  };
-
+  octomock.resetMocks();
   setIssueBody("<p>Email of Requester: user@gmail.com</p>");
-
-  core.debug = functions.debug;
-  core.setFailed = functions.setFailed;
-  core.setOutput = functions.setOutput;
-
-  GitHub.mockImplementation(() => github);
+  process.env.GITHUB_REPOSITORY = "testOwner/testRepo";
+  let coreImpl = octomock.getCoreImplementation();
+  coreImpl.getInput = jest
+    .fn()
+    .mockReturnValueOnce("/path")
+    .mockReturnValueOnce("user@gmail.com")
+    .mockReturnValueOnce("direct_member");
+  octomock.updateCoreImplementation(coreImpl);
 });
 
-afterEach(() => {
-  process.env = OLD_ENV;
-});
+afterEach(() => {});
 
-let ensureDefaultPayload = () => {
-  if (!context.payload || !context.payload.issue) {
-    context.payload = {
-      issue: {
-        body: "",
-        user: {}
-      }
-    };
-  }
-};
 let setIssueBody = body => {
-  ensureDefaultPayload();
+  const context = octomock.getContext();
   context.payload.issue.body = body;
+  octomock.updateContext(context);
 };
 
 let setIssueUser = user => {
-  ensureDefaultPayload();
+  const context = octomock.getContext();
   context.payload.issue.user = user;
+  octomock.updateContext(context);
 };
 
 describe("Main", () => {
   it("parses the parser rules and creates an invitation with a valid body", async () => {
-    core.getInput = jest
-      .fn()
-      .mockReturnValueOnce("/path")
-      .mockReturnValueOnce("user@gmail.com")
-      .mockReturnValueOnce("direct_member");
     await main.main();
-    expect(functions.getContents).toHaveBeenCalledTimes(1);
-    expect(functions.createInvitation).toHaveBeenCalledTimes(1);
-    expect(functions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("throws an error when an email is not provided", async () => {
-    core.getInput = jest
+    let coreImpl = octomock.getCoreImplementation();
+    coreImpl.getInput = jest
       .fn()
       .mockReturnValueOnce("/path")
       .mockReturnValueOnce("direct_member");
+    octomock.updateCoreImplementation(coreImpl);
+
     await main.main();
-    expect(functions.getContents).toHaveBeenCalledTimes(1);
-    expect(functions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(functions.setFailed).toHaveBeenCalledTimes(1);
-    expect(functions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("parses the config and throws an exception due to an invalid email", async () => {
     const email = "user@email.com";
-    setIssueBody(`<p>Email of Requester: ${email}</p>`);
     const errorMessage = `Email ${email} not from a valid domain`;
-
-    core.getInput = jest
+    let coreImpl = octomock.getCoreImplementation();
+    coreImpl.getInput = jest
       .fn()
       .mockReturnValueOnce("/path")
       .mockReturnValueOnce(email)
       .mockReturnValueOnce("direct_member");
+    octomock.updateCoreImplementation(coreImpl);
+
     await main.main();
-    expect(functions.getContents).toHaveBeenCalledTimes(1);
-    expect(functions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(functions.setFailed).toHaveBeenCalledTimes(1);
-    expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
-    expect(functions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("parses the config and throws an exception due to an invalid user that created the issue", async () => {
@@ -154,31 +106,34 @@ describe("Main", () => {
     setIssueUser({
       login: createdUser
     });
-    core.getInput = jest
-      .fn()
-      .mockReturnValueOnce("/path")
-      .mockReturnValueOnce("direct_member");
 
     await main.main();
-    expect(functions.getContents).toHaveBeenCalledTimes(1);
-    expect(functions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(functions.setFailed).toHaveBeenCalledTimes(1);
-    expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
-    expect(functions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+
+    setIssueUser({
+      login: "ValidUser"
+    });
   });
 
   it("fails to get a good octokit instance and throws an exception", async () => {
     const errorMessage = "Failed to get a proper GitHub client.";
-    GitHub.mockImplementation(() => {
+    let ghImpl = octomock.getGitHubImplementation();
+    ghImpl.GitHub = jest.fn(() => {
       throw Error(errorMessage);
     });
+    octomock.updateGitHubImplementation(ghImpl);
+
     await main.main();
 
-    expect(functions.getContents).toHaveBeenCalledTimes(0);
-    expect(functions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(functions.setFailed).toHaveBeenCalledTimes(1);
-    expect(functions.setFailed).toHaveBeenCalledWith(errorMessage);
-    expect(functions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("validateConfig returns true with a valid configFile", () => {

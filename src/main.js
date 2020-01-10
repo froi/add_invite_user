@@ -1,8 +1,9 @@
-const core = require("@actions/core");
 const github = require("@actions/github");
+const core = require("@actions/core");
 
 async function getConfig({ octokit, owner, repo, path }) {
   const result = await octokit.repos.getContents({ owner, repo, path });
+
   core.debug("in getParserRules");
   const content = Buffer.from(result.data.content, "base64").toString("ascii");
   core.debug(JSON.stringify(content));
@@ -49,7 +50,6 @@ async function main() {
   try {
     core.debug(new Date().toTimeString());
     const octokit = getOctokit();
-
     const { issue } = github.context.payload;
     const configPath = core.getInput("CONFIG_PATH");
 
@@ -99,4 +99,4 @@ async function main() {
   }
 }
 
-module.exports = { main, validateConfig, validateEmail };
+module.exports = { main, validateConfig, validateEmail, handleError };
