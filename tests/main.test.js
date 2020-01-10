@@ -12,18 +12,8 @@ const emailRule = {
   regex: ".*@gmail.com$"
 };
 
-const parserRules = {
-  username: {
-    regex: "<p>Name of Requester:\\s*(?<username>.+?)<\\/p>"
-  },
-  email: {
-    regex: "<p>Email of Requester:\\s*(?<email>.+?)<\\/p>"
-  }
-};
-
 const configFile = {
-  emailRule: emailRule,
-  parserRules: parserRules
+  emailRule: emailRule
 };
 
 let buildContents = config => {
@@ -114,6 +104,7 @@ describe("Main", () => {
     core.getInput = jest
       .fn()
       .mockReturnValueOnce("/path")
+      .mockReturnValueOnce("user@gmail.com")
       .mockReturnValueOnce("direct_member");
     await main.main();
     expect(functions.getContents).toHaveBeenCalledTimes(1);
@@ -121,8 +112,7 @@ describe("Main", () => {
     expect(functions.setOutput).toHaveBeenCalledTimes(2);
   });
 
-  it("parses the parser rules and throws an exception with an invalid body", async () => {
-    setIssueBody("Any test data without an email");
+  it("throws an error when an email is not provided", async () => {
     core.getInput = jest
       .fn()
       .mockReturnValueOnce("/path")
@@ -142,6 +132,7 @@ describe("Main", () => {
     core.getInput = jest
       .fn()
       .mockReturnValueOnce("/path")
+      .mockReturnValueOnce(email)
       .mockReturnValueOnce("direct_member");
     await main.main();
     expect(functions.getContents).toHaveBeenCalledTimes(1);
@@ -195,24 +186,12 @@ describe("Main", () => {
   });
 
   it("validateConfig throws an error with a missing emailRule", () => {
-    const invalidFile = {
-      parsergRules: parserRules
-    };
+    const invalidFile = {};
 
     // toThrow expects a function, so wrapping in an anonymous function
     expect(() => {
       main.validateConfig({ config: invalidFile });
     }).toThrowError("Config lacks valid email rule");
-  });
-
-  it("validateConfig throws an error with a missing parsingRule", () => {
-    const invalidFile = {
-      emailRule: emailRule
-    };
-
-    expect(() => {
-      main.validateConfig({ config: invalidFile });
-    }).toThrowError("Config lacks valid parser rules");
   });
 
   it("validateEmail returns true with a valid email", () => {
