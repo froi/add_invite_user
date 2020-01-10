@@ -17,10 +17,6 @@ function validateConfig({ config }) {
     throw new Error("Config lacks valid email rule");
   }
 
-  if (!("parserRules" in config)) {
-    throw new Error("Config lacks valid parser rules");
-  }
-
   return true;
 }
 
@@ -54,12 +50,11 @@ async function main() {
   try {
     core.debug(new Date().toTimeString());
     const octokit = getOctokit();
-    
     const { issue } = github.context.payload;
     const configPath = core.getInput("CONFIG_PATH");
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
-    const { emailRule, parserRules, trustedUserRule } = await getConfig({
+    const { emailRule, trustedUserRule } = await getConfig({
       octokit,
       owner,
       repo,
@@ -75,17 +70,14 @@ async function main() {
       );
     }
 
-    const emailMatch = issue.body.match(parserRules.email.regex);
     core.debug(issue.body);
-    if (!emailMatch) {
-      throw new Error("Parsing error: email not found.");
-    }
 
-    const email = emailMatch.groups.email;
+    const email = core.getInput("EMAIL");
     const role = core.getInput("USER_ROLE") || "direct_member";
     if (!validateEmail({ email, emailRegex: emailRule.regex })) {
       throw new Error(`Email ${email} not from a valid domain`);
     }
+
     if (email) {
       const result = await octokit.orgs.createInvitation({
         org: owner,
