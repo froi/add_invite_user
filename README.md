@@ -117,8 +117,6 @@ jobs:
         uses: jasonmacgowan/parse-issue@master
         with:
           extract_email: '<p>Email of Requester:\s*(.*)</p>'
-        env:
-          ADMIN_TOKEN: ${{ secrets.ADMTIN_TOKEN }}
       - name: Invite User
         id: get-issue-data
         uses: froi/add_invite_user@release/v1
