@@ -43,12 +43,14 @@ afterEach(() => {});
 let setIssueBody = body => {
   const context = octomock.getContext();
   context.payload.issue.body = body;
+  context.payload.issue.number = 1;
   octomock.updateContext(context);
 };
 
 let setIssueUser = user => {
   const context = octomock.getContext();
   context.payload.issue.user = user;
+  context.payload.issue.number = 1;
   octomock.updateContext(context);
 };
 
@@ -58,6 +60,35 @@ describe("Main", () => {
     expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
     expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(1);
     expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+  });
+
+  it("Adds the retry label and adds a comment on the issue when it hits the rate limit", async () => {
+    octomock.mockFunctions.createInvitation.mockReturnValue(
+      Promise.reject({
+        name: "HttpError",
+        status: 422,
+        headers: {},
+        request: {},
+        errors: [
+          {
+            resource: "OrganizationInvitation",
+            code: "unprocessable",
+            field: "data",
+            message: "Over invitation rate limit"
+          }
+        ],
+        documentation_url:
+          "https://developer.github.com/v3/orgs/members/#create-organization-invitation"
+      })
+    );
+
+    await main.main();
+    expect(octomock.mockFunctions.addLabels).toHaveBeenCalledWith({
+      org: "testOwner",
+      repo: "testRepo",
+      issue_number: 1,
+      labels: ["retry"]
+    });
   });
 
   it("throws an error when an email is not provided", async () => {

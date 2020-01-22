@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "format-check": "prettier --check **/*.js",
+    "format": "prettier --write **/*.js",
     "lint": "eslint index.js",
     "package": "ncc build index.js -o dist",
     "pretest": "npm run lint",
