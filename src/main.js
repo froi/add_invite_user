@@ -79,11 +79,35 @@ async function main() {
     }
 
     if (email) {
-      const result = await octokit.orgs.createInvitation({
-        org: owner,
-        role,
-        email
-      });
+      let result;
+      try {
+        result = await octokit.orgs.createInvitation({
+          org: owner,
+          role,
+          email
+        });
+      } catch (error) {
+        if (
+          error.errors.filter(e => e.message === "Over invitation rate limit")
+            .length > 0
+        ) {
+          await octokit.issues.addLabels({
+            org: owner,
+            repo,
+            issue_number: issue.number,
+            labels: ["retry"]
+          });
+
+          await octokit.issues.createComment({
+            org: owner,
+            repo,
+            issue_number: issue.number,
+            body: `Rate Limit error recieved.  Retrying over-night`
+          });
+
+          throw new Error("Over invitiation rate limit");
+        }
+      }
       const successMessage = `User with email ${email} has been invited into the org.`;
       core.debug(result);
       core.info(successMessage);
