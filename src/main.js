@@ -1,5 +1,6 @@
 const github = require("@actions/github");
 const core = require("@actions/core");
+const outdent = require("outdent");
 
 async function getConfig({ octokit, owner, repo, path }) {
   const result = await octokit.repos.getContents({ owner, repo, path });
@@ -106,6 +107,23 @@ async function main() {
           });
 
           throw new Error("Over invitiation rate limit");
+        } else {
+          const owners = core.getInput("OWNERS");
+          await octokit.issues.addLabels({
+            org: owner,
+            repo,
+            issue_number: issue.number,
+            labels: ["automation-failed"]
+          });
+
+          await octokit.issues.createComment({
+            org: owner,
+            repo,
+            issue_number: issue.number,
+            body: outdent`Automation Failed:
+                Org Admins will review the request and action it manually.
+                CC: ${owners}`
+          });
         }
       }
       const successMessage = `User with email ${email} has been invited into the org.`;
