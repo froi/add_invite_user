@@ -5,6 +5,9 @@ inputs:
     description: 'path to the prasing rules'
     required: true
     default: '.github/parsing_rules.json'
+  OWNERS:
+    description: 'Users to notify in the event of a failure.  In the form of a csv'
+    required: true
 outputs:
   message:
     description: 'Message output. Can be of actions taken or an error message.'
