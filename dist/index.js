@@ -35,7 +35,7 @@ module.exports =
 /******/ 	function startup() {
 /******/ 		// Load entry module and return exports
 /******/ 		return __webpack_require__(104);
-/******/ 	};
+/******/ 	}
 /******/
 /******/ 	// run startup
 /******/ 	return startup();
@@ -8559,7 +8559,7 @@ function which (cmd, opt, cb) {
     if (!pathPart && (/^\.[\\\/]/).test(cmd)) {
       p = cmd.slice(0, 2) + p
     }
-    ;(function E (ii, ll) {
+    (function E (ii, ll) {
       if (ii === ll) return F(i + 1, l)
       var ext = pathExt[ii]
       isexe(p + ext, { pathExt: pathExtExe }, function (er, is) {
