@@ -1,5 +1,6 @@
 /* global octomock */
 const main = require("../src/main");
+const outdent = require("outdent");
 
 const emailRule = {
   regex: ".*@gmail.com$"
@@ -34,7 +35,8 @@ beforeEach(() => {
     .fn()
     .mockReturnValueOnce("/path")
     .mockReturnValueOnce("user@gmail.com")
-    .mockReturnValueOnce("direct_member");
+    .mockReturnValueOnce("direct_member")
+    .mockReturnValueOnce("@someOwner,@anotherOwner");
   octomock.updateCoreImplementation(coreImpl);
 });
 
@@ -91,6 +93,42 @@ describe("Main", () => {
     });
   });
 
+  it("Adds the automation-failed label and adds a comment on the issue when it hits the rate limit", async () => {
+    octomock.mockFunctions.createInvitation.mockReturnValue(
+      Promise.reject({
+        name: "HttpError",
+        status: 422,
+        headers: {},
+        request: {},
+        errors: [
+          {
+            resource: "OrganizationInvitation",
+            code: "unprocessable",
+            field: "data",
+            message: "Some Other Error"
+          }
+        ],
+        documentation_url:
+          "https://developer.github.com/v3/orgs/members/#create-organization-invitation"
+      })
+    );
+
+    await main.main();
+    expect(octomock.mockFunctions.addLabels).toHaveBeenCalledWith({
+      org: "testOwner",
+      repo: "testRepo",
+      issue_number: 1,
+      labels: ["automation-failed"]
+    });
+    expect(octomock.mockFunctions.createComment).toHaveBeenCalledWith({
+      org: "testOwner",
+      repo: "testRepo",
+      issue_number: 1,
+      body: outdent`Automation Failed:
+            Org Admins will review the request and action it manually.
+            CC: @someOwner,@anotherOwner`
+    });
+  });
   it("throws an error when an email is not provided", async () => {
     let coreImpl = octomock.getCoreImplementation();
     coreImpl.getInput = jest
