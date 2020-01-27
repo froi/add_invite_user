@@ -124,6 +124,7 @@ async function main() {
                 Org Admins will review the request and action it manually.
                 CC: ${owners}`
           });
+          throw error;
         }
       }
       const successMessage = `User with email ${email} has been invited into the org.`;

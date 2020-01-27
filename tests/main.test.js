@@ -91,6 +91,8 @@ describe("Main", () => {
       issue_number: 1,
       labels: ["retry"]
     });
+
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
   });
 
   it("Adds the automation-failed label and adds a comment on the issue when it hits the rate limit", async () => {
@@ -128,6 +130,8 @@ describe("Main", () => {
             Org Admins will review the request and action it manually.
             CC: @someOwner,@anotherOwner`
     });
+
+    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
   });
   it("throws an error when an email is not provided", async () => {
     let coreImpl = octomock.getCoreImplementation();
