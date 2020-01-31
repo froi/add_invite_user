@@ -40,7 +40,7 @@ function getOctokit() {
 }
 
 function validateEmail({ email, emailRegex }) {
-  return new RegExp(emailRegex).test(email);
+  return new RegExp(emailRegex, "i").test(email);
 }
 
 function isTrustedUser({ issue, trustedUserRegex }) {

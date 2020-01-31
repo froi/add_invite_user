@@ -239,4 +239,13 @@ describe("Main", () => {
       })
     ).toEqual(false);
   });
+
+  it("validateEmail is case insensitive by default", () => {
+    expect(
+      main.validateEmail({
+        email: "user@EMAIL.com",
+        emailRegex: ".*@email.com$"
+      })
+    ).toEqual(true);
+  });
 });
