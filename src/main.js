@@ -75,11 +75,12 @@ async function main() {
 
     const email = core.getInput("EMAIL");
     const role = core.getInput("USER_ROLE") || "direct_member";
-    if (!validateEmail({ email, emailRegex: emailRule.regex })) {
-      throw new Error(`Email ${email} not from a valid domain`);
+
+    if (!email) {
+      throw new Error("Email not found in issue");
     }
 
-    if (email) {
+    if (validateEmail({ email, emailRegex: emailRule.regex })) {
       let result;
       try {
         result = await octokit.orgs.createInvitation({
@@ -133,7 +134,10 @@ async function main() {
       core.setOutput("message", successMessage);
       core.setOutput("stepStatus", "success");
     } else {
-      throw new Error("Email not found in issue");
+      const emailMessage = `Email ${email} not from a valid domain`;
+      core.info(emailMessage);
+      core.setOutput("message", emailMessage);
+      core.setOutput("stepStatus", "approvalRequired");
     }
 
     core.info(new Date().toTimeString());

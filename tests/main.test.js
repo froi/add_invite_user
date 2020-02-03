@@ -135,10 +135,7 @@ describe("Main", () => {
   });
   it("throws an error when an email is not provided", async () => {
     let coreImpl = octomock.getCoreImplementation();
-    coreImpl.getInput = jest
-      .fn()
-      .mockReturnValueOnce("/path")
-      .mockReturnValueOnce("direct_member");
+    coreImpl.getInput = jest.fn().mockReturnValueOnce("/path");
     octomock.updateCoreImplementation(coreImpl);
 
     await main.main();
@@ -162,9 +159,16 @@ describe("Main", () => {
     await main.main();
     expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
     expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
-    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.setOutput).toHaveBeenNthCalledWith(
+      1,
+      "message",
+      errorMessage
+    );
+    expect(octomock.mockFunctions.setOutput).toHaveBeenNthCalledWith(
+      2,
+      "stepStatus",
+      "approvalRequired"
+    );
   });
 
   it("parses the config and throws an exception due to an invalid user that created the issue", async () => {
