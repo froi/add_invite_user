@@ -2,6 +2,7 @@
 const main = require("../src/main");
 const outdent = require("outdent");
 
+const issueNumber = 1;
 const emailRule = {
   regex: ".*@gmail.com$"
 };
@@ -17,18 +18,25 @@ let buildContents = config => {
   };
 };
 
-octomock.mockFunctions.getContents.mockReturnValue(buildContents(configFile));
-octomock.mockFunctions.setOutput.mockImplementation((name, value) => {
+octomock.mockFunctions.repos.getContents.mockReturnValue(
+  buildContents(configFile)
+);
+octomock.mockFunctions.core.setOutput.mockImplementation((name, value) => {
   return { [name]: value };
 });
 
 let updateConfigFile = config => {
-  octomock.mockFunctions.getContents.mockReturnValue(buildContents(config));
+  octomock.mockFunctions.repos.getContents.mockReturnValue(
+    buildContents(config)
+  );
 };
 
 beforeEach(() => {
   octomock.resetMocks();
-  setIssueBody("<p>Email of Requester: user@gmail.com</p>");
+  octomock.loadIssueLabeledContext({
+    issueBody: "<p>Email of Requester: user@gmail.com</p>",
+    issueNumber: issueNumber
+  });
   process.env.GITHUB_REPOSITORY = "testOwner/testRepo";
   let coreImpl = octomock.getCoreImplementation();
   coreImpl.getInput = jest
@@ -42,13 +50,6 @@ beforeEach(() => {
 
 afterEach(() => {});
 
-let setIssueBody = body => {
-  const context = octomock.getContext();
-  context.payload.issue.body = body;
-  context.payload.issue.number = 1;
-  octomock.updateContext(context);
-};
-
 let setIssueUser = user => {
   const context = octomock.getContext();
   context.payload.issue.user = user;
@@ -59,13 +60,15 @@ let setIssueUser = user => {
 describe("Main", () => {
   it("parses the parser rules and creates an invitation with a valid body", async () => {
     await main.main();
-    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.repos.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.orgs.createInvitation).toHaveBeenCalledTimes(
+      1
+    );
+    expect(octomock.mockFunctions.core.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("Adds the retry label and adds a comment on the issue when it hits the rate limit", async () => {
-    octomock.mockFunctions.createInvitation.mockReturnValue(
+    octomock.mockFunctions.orgs.createInvitation.mockReturnValue(
       Promise.reject({
         name: "HttpError",
         status: 422,
@@ -85,18 +88,18 @@ describe("Main", () => {
     );
 
     await main.main();
-    expect(octomock.mockFunctions.addLabels).toHaveBeenCalledWith({
+    expect(octomock.mockFunctions.issues.addLabels).toHaveBeenCalledWith({
       org: "testOwner",
       repo: "testRepo",
-      issue_number: 1,
+      issue_number: issueNumber,
       labels: ["retry"]
     });
 
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.core.setFailed).toHaveBeenCalledTimes(1);
   });
 
   it("Adds the automation-failed label and adds a comment on the issue when it hits the rate limit", async () => {
-    octomock.mockFunctions.createInvitation.mockReturnValue(
+    octomock.mockFunctions.orgs.createInvitation.mockReturnValue(
       Promise.reject({
         name: "HttpError",
         status: 422,
@@ -116,33 +119,36 @@ describe("Main", () => {
     );
 
     await main.main();
-    expect(octomock.mockFunctions.addLabels).toHaveBeenCalledWith({
+    expect(octomock.mockFunctions.issues.addLabels).toHaveBeenCalledWith({
       org: "testOwner",
       repo: "testRepo",
-      issue_number: 1,
+      issue_number: issueNumber,
       labels: ["automation-failed"]
     });
-    expect(octomock.mockFunctions.createComment).toHaveBeenCalledWith({
+    expect(octomock.mockFunctions.issues.createComment).toHaveBeenCalledWith({
       org: "testOwner",
       repo: "testRepo",
-      issue_number: 1,
+      issue_number: issueNumber,
       body: outdent`Automation Failed:
             Org Admins will review the request and action it manually.
             CC: @someOwner,@anotherOwner`
     });
 
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.core.setFailed).toHaveBeenCalledTimes(1);
   });
+
   it("throws an error when an email is not provided", async () => {
     let coreImpl = octomock.getCoreImplementation();
     coreImpl.getInput = jest.fn().mockReturnValueOnce("/path");
     octomock.updateCoreImplementation(coreImpl);
 
     await main.main();
-    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.repos.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.orgs.createInvitation).toHaveBeenCalledTimes(
+      0
+    );
+    expect(octomock.mockFunctions.core.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.core.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("parses the config and throws an exception due to an invalid email", async () => {
@@ -157,14 +163,16 @@ describe("Main", () => {
     octomock.updateCoreImplementation(coreImpl);
 
     await main.main();
-    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(octomock.mockFunctions.setOutput).toHaveBeenNthCalledWith(
+    expect(octomock.mockFunctions.repos.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.orgs.createInvitation).toHaveBeenCalledTimes(
+      0
+    );
+    expect(octomock.mockFunctions.core.setOutput).toHaveBeenNthCalledWith(
       1,
       "message",
       errorMessage
     );
-    expect(octomock.mockFunctions.setOutput).toHaveBeenNthCalledWith(
+    expect(octomock.mockFunctions.core.setOutput).toHaveBeenNthCalledWith(
       2,
       "stepStatus",
       "approvalRequired"
@@ -185,11 +193,15 @@ describe("Main", () => {
     });
 
     await main.main();
-    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
-    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.repos.getContents).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.orgs.createInvitation).toHaveBeenCalledTimes(
+      0
+    );
+    expect(octomock.mockFunctions.core.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.core.setFailed).toHaveBeenCalledWith(
+      errorMessage
+    );
+    expect(octomock.mockFunctions.core.setOutput).toHaveBeenCalledTimes(2);
 
     setIssueUser({
       login: "ValidUser"
@@ -206,11 +218,15 @@ describe("Main", () => {
 
     await main.main();
 
-    expect(octomock.mockFunctions.getContents).toHaveBeenCalledTimes(0);
-    expect(octomock.mockFunctions.createInvitation).toHaveBeenCalledTimes(0);
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledTimes(1);
-    expect(octomock.mockFunctions.setFailed).toHaveBeenCalledWith(errorMessage);
-    expect(octomock.mockFunctions.setOutput).toHaveBeenCalledTimes(2);
+    expect(octomock.mockFunctions.repos.getContents).toHaveBeenCalledTimes(0);
+    expect(octomock.mockFunctions.orgs.createInvitation).toHaveBeenCalledTimes(
+      0
+    );
+    expect(octomock.mockFunctions.core.setFailed).toHaveBeenCalledTimes(1);
+    expect(octomock.mockFunctions.core.setFailed).toHaveBeenCalledWith(
+      errorMessage
+    );
+    expect(octomock.mockFunctions.core.setOutput).toHaveBeenCalledTimes(2);
   });
 
   it("validateConfig returns true with a valid configFile", () => {
