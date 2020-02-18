@@ -37,7 +37,7 @@
     "outdent": "^0.7.0"
   },
   "devDependencies": {
-    "@chocrates/octomock": "^1.0.1",
+    "@chocrates/octomock": "^1.0.2",
     "@zeit/ncc": "^0.20.5",
     "eslint": "^6.3.0",
     "eslint-plugin-jest": "^23.7.0",
