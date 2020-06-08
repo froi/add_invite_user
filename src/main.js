@@ -55,6 +55,7 @@ async function main() {
     const configPath = core.getInput("CONFIG_PATH");
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+    core.debug(`ZBK:  ${owner}, ${repo}`);
     const { emailRule, trustedUserRule } = await getConfig({
       octokit,
       owner,
