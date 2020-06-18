@@ -72,8 +72,7 @@ async function main() {
       );
     }
 
-    core.debug(issue.body);
-
+    core.debug(JSON.stringify(issue.body));
     const email = core.getInput("EMAIL");
     const role = core.getInput("USER_ROLE") || "direct_member";
     if (!validateEmail({ email, emailRegex: emailRule.regex })) {
