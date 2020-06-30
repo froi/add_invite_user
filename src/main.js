@@ -55,6 +55,7 @@ async function main() {
     const configPath = core.getInput("CONFIG_PATH");
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+    core.debug(`ZBK:  ${owner}, ${repo}`);
     const { emailRule, trustedUserRule } = await getConfig({
       octokit,
       owner,
@@ -71,8 +72,7 @@ async function main() {
       );
     }
 
-    core.debug(issue.body);
-
+    core.debug(JSON.stringify(issue.body));
     const email = core.getInput("EMAIL");
     const role = core.getInput("USER_ROLE") || "direct_member";
     if (!validateEmail({ email, emailRegex: emailRule.regex })) {
