@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/froi/add_invite_user#readme",
   "dependencies": {
-    "@actions/core": "^1.6.0",
+    "@actions/core": "^1.9.1",
     "@actions/github": "^5.0.0",
     "outdent": "^0.8.0"
   },
